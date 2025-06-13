@@ -13,11 +13,7 @@ st.image(logo, width=200)
 st.markdown(
     "<h1 style='color:#3a4e9f;'>📦 Générateur de Packing List</h1>",
     unsafe_allow_html=True
-)
 
-st.markdown(
-    "<p style='color:gray;'>Par <strong><span style='color:#d5231c;'>e</span>-<span style='color:#3a4e9f;'>LOG</span> <span style='color:black;'>France</span></strong> – Solutions et prestations logistiques.</p>",
-    unsafe_allow_html=True
 )
 
 uploaded_file = st.file_uploader("📁 Importer un fichier Excel ou CSV", type=["xlsx", "csv"])
