@@ -6,7 +6,7 @@ st.set_page_config(page_title="Générateur de Packing List", layout="wide")
 from PIL import Image
 
 # Afficher le logo
-logo = Image.open("logo_elog.png")
+logo = Image.open("logo v3.png")
 st.image(logo, width=200)
 
 # Titre personnalisé
