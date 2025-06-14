@@ -48,11 +48,30 @@ if uploaded_f1 and uploaded_f2 and st.button("🚀 Générer le fichier final"):
         for row in ws_f1.iter_rows(min_row=1, max_row=20, max_col=8):
             for cell in row:
                 if cell.value == "Delivery Note / Bon de livraison":
-                    ws_f1.unmerge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=9)
+                    try:
+                        ws_f1.unmerge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=9)
+                    except:
+                        pass
                     ws_f1.merge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=8)
                     break
 
-    
+        # Nettoyage sécurisé H9/I9
+        h9 = ws_f1["H9"].value or ""
+        try:
+            i9 = ws_f1["I9"].value or ""
+        except:
+            i9 = ""
+        ws_f1["H9"].value = f"{h9} {i9}".strip()
+
+        try:
+            ws_f1["I9"].value = None
+        except:
+            pass
+
+        try:
+            ws_f1.merge_cells("H9:I9")
+        except:
+            pass
 
         # Ajout du champ "N° de palette" en H11 avec le style de G11
         ws_f1["H11"].value = "N° de palette"
@@ -84,7 +103,7 @@ if uploaded_f1 and uploaded_f2 and st.button("🚀 Générer le fichier final"):
         st.download_button(
             label="📥 Télécharger le fichier final",
             data=output.getvalue(),
-            file_name="PackingList_V2.2.xlsx",
+            file_name="PackingList_V3.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
