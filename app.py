@@ -52,12 +52,7 @@ if uploaded_f1 and uploaded_f2 and st.button("🚀 Générer le fichier final"):
                     ws_f1.merge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=8)
                     break
 
-        # Nettoyage H9/I9
-        h9 = ws_f1["H9"].value or ""
-        i9 = ws_f1["I9"].value or ""
-        ws_f1["H9"].value = f"{h9} {i9}".strip()
-        ws_f1["I9"].value = None
-        ws_f1.merge_cells("H9:I9")
+    
 
         # Ajout du champ "N° de palette" en H11 avec le style de G11
         ws_f1["H11"].value = "N° de palette"
