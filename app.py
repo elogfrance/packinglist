@@ -94,11 +94,7 @@ if uploaded_f1 and uploaded_f2 and st.button("🚀 Générer le fichier final"):
         wb_f1.save(output)
         output.seek(0)
 
-        # Affichage du résultat dans Streamlit
-        df_result = pd.read_excel(output)
-        st.subheader("📊 Résultat après traitement")
-        st.dataframe(df_result)
-
+     
         # Bouton de téléchargement
         st.download_button(
             label="📥 Télécharger le fichier final",
