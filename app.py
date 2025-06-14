@@ -31,7 +31,7 @@ with col2:
     uploaded_f2 = st.file_uploader("📁 2. Importer le fichier **F2** (références Vlookup)", type=["xlsx"], key="f2")
 
 # Traitement à l'appui du bouton
-if uploaded_f1 and uploaded_f2
+if uploaded_f1 and uploaded_f2:
     try:
         # Chargement des fichiers
         wb_f1 = load_workbook(uploaded_f1)
