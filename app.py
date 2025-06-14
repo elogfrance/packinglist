@@ -25,6 +25,12 @@ st.markdown("### 📁 Étape 1 : Importer vos fichiers")
 
 uploaded_f1 = st.file_uploader("📄 Importer le fichier **F1** (principal)", type=["xlsx"], key="f1")
 uploaded_f2 = st.file_uploader("📄 Importer le fichier **F2** (références Vlookup)", type=["xlsx"], key="f2")
+from openpyxl import load_workbook
+from copy import copy
+from io import BytesIO
+
+if uploaded_f1 and uploaded_f2 and st.button("🚀 Générer le fichier final"):
+    # ... (tout le reste du traitement V2.2)
 
 uploaded_file = st.file_uploader("📁 Importer un fichier Excel ou CSV", type=["xlsx", "csv"])
 
