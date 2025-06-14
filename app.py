@@ -32,8 +32,10 @@ col1, col2 = st.columns(2)
 
 with col1:
     uploaded_f1 = st.file_uploader("📁 1. Importer le fichier TO SHIP", type=["xlsx"], key="f1")
-     with st.expander("📎 Voir le template (F1)"):
-        st.image("template_f1.png", caption="modèle de fichier à expedier.pdf")
+    
+    with st.expander("📎 Voir le template (F1)"):
+        st.image("template_f1.png", caption="modèle de fichier à expédier.pdf")
+
 
 with col2:
     uploaded_f2 = st.file_uploader("📁 2. Importer le fichier E LOG", type=["xlsx"], key="f2")
