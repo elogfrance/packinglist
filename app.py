@@ -21,9 +21,14 @@ st.image(logo, width=200)
 st.markdown("<h1 style='color:#3a4e9f;'>📦 Générateur de Packing List</h1>", unsafe_allow_html=True)
 st.markdown("### 📁 Étape 1 : Importer vos fichiers Excel")
 
-# Import des fichiers
-uploaded_f1 = st.file_uploader("📄 Importer le fichier **F1** (principal)", type=["xlsx"], key="f1")
-uploaded_f2 = st.file_uploader("📄 Importer le fichier **F2** (références pour Vlookup)", type=["xlsx"], key="f2")
+col1, col2 = st.columns(2)
+
+with col1:
+    uploaded_f1 = st.file_uploader("📁 1. Importer le fichier **F1** (principal)", type=["xlsx"], key="f1")
+
+with col2:
+    uploaded_f2 = st.file_uploader("📁 2. Importer le fichier **F2** (références Vlookup)", type=["xlsx"], key="f2")
+
 
 # Traitement à l'appui du bouton
 if uploaded_f1 and uploaded_f2 and st.button("🚀 Générer le fichier final"):
