@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # Affichage du logo
-logo = Image.open("logo v3.png")
+logo = Image.open("marketparts.jpg")
 st.image(logo, width=200)
 
 # Titre principal
