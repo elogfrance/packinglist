@@ -13,9 +13,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Affichage du logo
-logo = Image.open("logo v3.png")
-st.image(logo, width=200)
 
 # Titre principal
 st.markdown("<h1 style='color:#3a4e9f;'>📦 Générateur de Packing List</h1>", unsafe_allow_html=True)
