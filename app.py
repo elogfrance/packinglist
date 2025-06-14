@@ -35,7 +35,7 @@ with col1:
     uploaded_f1 = st.file_uploader("📁 1. Importer le fichier TO SHIP", type=["xlsx"], key="f1")
     
     with st.expander("📎 Voir le template (F1)"):
-        st.image("template_fichier_to_ship.png", caption="template_fichier_to_ship.png")
+        st.image("template_fichier_to_ship.png", caption="template")
 
 
 with col2:
