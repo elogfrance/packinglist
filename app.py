@@ -20,7 +20,7 @@ logo = Image.open("logo_marketparts.png")
 st.image(logo, width=400)
 
 # Titre principal
-st.markdown("<h1 style='color:#3a4e9f;'>📦 Générateur de Packing List</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='color:#3a4e9f;'>Générateur de Packing List</h1>", unsafe_allow_html=True)
 
 
 # Import F1 et F2 en colonnes séparées
