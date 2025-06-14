@@ -21,7 +21,7 @@ st.image(logo, width=400)
 
 # Titre principal
 st.markdown(
-    "<h1 style='color:#3a4e9f; font-size:48px;'>Générateur de Packing List</h1>",
+    "<h1 style='color:#3a4e9f; font-size:24px;'>Générateur de Packing List</h1>",
     unsafe_allow_html=True
 )
 
