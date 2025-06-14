@@ -21,6 +21,10 @@ st.markdown(
     unsafe_allow_html=True
 
 )
+st.markdown("### 📁 Étape 1 : Importer vos fichiers")
+
+uploaded_f1 = st.file_uploader("📄 Importer le fichier **F1** (principal)", type=["xlsx"], key="f1")
+uploaded_f2 = st.file_uploader("📄 Importer le fichier **F2** (références Vlookup)", type=["xlsx"], key="f2")
 
 uploaded_file = st.file_uploader("📁 Importer un fichier Excel ou CSV", type=["xlsx", "csv"])
 
