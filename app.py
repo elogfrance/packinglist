@@ -1,6 +1,7 @@
 import streamlit as st
 from applications import packing_list, nouvel_outil
 from PIL import Image
+from streamlit.runtime.scriptrunner import rerun  # ✅ nouvelle façon de forcer le refresh
 
 st.set_page_config(page_title="Outils e-LOG", page_icon="📦", layout="centered")
 
@@ -19,23 +20,23 @@ if st.session_state.page == "home":
     with col1:
         if st.button("🧾 Générateur de Packing List"):
             st.session_state.page = "packing"
-            st.experimental_rerun()  # 🔁 recharge immédiate
+            rerun()  # 🔁 recharge immédiate avec nouveau module
 
     with col2:
         if st.button("🆕 Nouvel outil (F3 / F4)"):
             st.session_state.page = "nouvel"
-            st.experimental_rerun()  # 🔁 recharge immédiate
+            rerun()
 
 # Page : Packing list
 elif st.session_state.page == "packing":
     if st.button("⬅️ Retour à l'accueil"):
         st.session_state.page = "home"
-        st.experimental_rerun()
+        rerun()
     packing_list.run()
 
 # Page : Nouvel outil
 elif st.session_state.page == "nouvel":
     if st.button("⬅️ Retour à l'accueil"):
         st.session_state.page = "home"
-        st.experimental_rerun()
+        rerun()
     nouvel_outil.run()
