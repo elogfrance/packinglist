@@ -28,12 +28,6 @@ if st.session_state.outil is None:
         st.session_state.outil = "nouvel"
         st.rerun()
 
-# --- Si un outil a été sélectionné, on l’affiche seul ---
-elif st.session_state.outil == "packing":
-    if st.button("⬅️ Retour à l’accueil"):
-        st.session_state.outil = None
-        st.rerun()
-    packing_list.run()
 
 elif st.session_state.outil == "nouvel":
     if st.button("⬅️ Retour à l’accueil"):
