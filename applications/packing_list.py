@@ -6,8 +6,10 @@ from io import BytesIO
 from PIL import Image
 
 def run():
-    # Configuration de la page (local uniquement, ignorée dans navigation multi-outils)
-    # st.set_page_config(...) — déjà défini dans app.py
+    # Bouton retour à l’accueil
+    if st.button("⬅️ Retour à l’accueil"):
+        st.experimental_set_query_params()
+        st.stop()
 
     # Affichage du logo
     logo = Image.open("logo_marketparts.png")
@@ -19,7 +21,7 @@ def run():
         unsafe_allow_html=True
     )
 
-    # Import F1 et F2 en colonnes séparées
+    # Upload des fichiers
     col1, col2 = st.columns(2)
 
     with col1:
@@ -32,21 +34,18 @@ def run():
         with st.expander("📎 Voir le template (F2)"):
             st.image("template_f2.png", caption="Exemple de fichier E LOG")
 
-    # Traitement à l'appui du bouton
+    # Traitement
     if uploaded_f1 and uploaded_f2:
         try:
-            # Chargement des fichiers
             wb_f1 = load_workbook(uploaded_f1)
             ws_f1 = wb_f1.active
             wb_f2 = load_workbook(uploaded_f2, data_only=True)
             ws_f2 = wb_f2.active
 
-            # Suppression des colonnes "Unit Price" et "Total Price"
             headers = [cell.value for cell in ws_f1[11]]
             for idx in sorted([i for i, h in enumerate(headers) if h in ["Unit Price", "Total Price"]], reverse=True):
                 ws_f1.delete_cols(idx + 1)
 
-            # Fusion de la cellule "Delivery Note / Bon de livraison" de A à H
             for row in ws_f1.iter_rows(min_row=1, max_row=20, max_col=8):
                 for cell in row:
                     if cell.value == "Delivery Note / Bon de livraison":
@@ -57,7 +56,6 @@ def run():
                         ws_f1.merge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=8)
                         break
 
-            # Nettoyage sécurisé H9/I9
             h9 = ws_f1["H9"].value or ""
             try:
                 i9 = ws_f1["I9"].value or ""
@@ -75,13 +73,11 @@ def run():
             except:
                 pass
 
-            # Ajout du champ "N° de palette" en H11 avec le style de G11
             ws_f1["H11"].value = "N° de palette"
             if ws_f1["G11"].has_style:
                 for attr in ["font", "border", "fill", "number_format", "protection", "alignment"]:
                     setattr(ws_f1["H11"], attr, copy(getattr(ws_f1["G11"], attr)))
 
-            # Recherche V depuis F2 vers F1
             for row in range(12, ws_f1.max_row + 1):
                 key = ws_f1[f"A{row}"].value
                 if not key:
@@ -91,12 +87,10 @@ def run():
                         ws_f1[f"H{row}"].value = r[4].value
                         break
 
-            # Sauvegarde dans la mémoire
             output = BytesIO()
             wb_f1.save(output)
             output.seek(0)
 
-            # Bouton de téléchargement
             st.download_button(
                 label="📥 Télécharger la packing list au format Excel",
                 data=output.getvalue(),
