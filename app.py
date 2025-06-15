@@ -1,6 +1,6 @@
 import streamlit as st
 
-# ➊ Récupérer le paramètre 'tool' dans l'URL (remplacement de experimental_get_query_params)
+# ➊ Récupérer le paramètre 'tool' dans l'URL
 tool = st.query_params.get("tool", [None])[0]
 
 # ➋ Configuration de la page (toujours le premier appel Streamlit)
@@ -16,7 +16,7 @@ elif tool == "autodoc":
     autodoc.run()
 
 else:
-    # Menu principal
+    # Menu principal par vignettes
     st.markdown(
         "<h1 style='text-align: center; color: #3a4e9f;'>🧰 Outils E-LOG</h1>",
         unsafe_allow_html=True
@@ -30,8 +30,7 @@ else:
 
     # Vignette Packing List
     link1 = (
-        '<a href="?tool=packing_list" target="_blank" '
-        'style="text-decoration: none;">'
+        '<a href="?tool=packing_list" target="_blank" style="text-decoration: none;">'
         '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
         'border-radius:8px;">'
         '📦<br><strong>Packing List</strong>'
@@ -40,8 +39,7 @@ else:
 
     # Vignette Packing List Autodoc
     link2 = (
-        '<a href="?tool=autodoc" target="_blank" '
-        'style="text-decoration: none;">'
+        '<a href="?tool=autodoc" target="_blank" style="text-decoration: none;">'
         '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
         'border-radius:8px;">'
         '🧾<br><strong>Packing List Autodoc</strong>'
@@ -50,4 +48,3 @@ else:
 
     col1.markdown(link1, unsafe_allow_html=True)
     col2.markdown(link2, unsafe_allow_html=True)
-
