@@ -44,56 +44,53 @@ if uploaded_f1 and uploaded_f2:
         wb_f2 = load_workbook(uploaded_f2, data_only=True)
         ws_f2 = wb_f2.active
 
-        # Suppression des colonnes "Unit Price" et "Total Price" à partir de la ligne 11
-        header_row_idx = 11
-        headers = [cell.value for cell in ws_f1[header_row_idx]]
-        cols_to_delete = [i for i, h in enumerate(headers) if h in ["Unit Price", "Total Price"]]
-        for col_idx in sorted(cols_to_delete, reverse=True):
-            ws_f1.delete_cols(col_idx + 1)
+        # Suppression des colonnes G, H et I (colonnes 7, 8, 9)
+        for col_idx in [9, 8, 7]:  # I, H, G
+            ws_f1.delete_cols(col_idx)
 
-        # Fusion de la cellule "Delivery Note / Bon de livraison" de A à H
+        # Fusion de la cellule "Delivery Note / Bon de livraison" de A à H (attention : devient A à E après suppression)
         for row in ws_f1.iter_rows(min_row=1, max_row=20, max_col=8):
             for cell in row:
                 if cell.value == "Delivery Note / Bon de livraison":
                     try:
-                        ws_f1.unmerge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=9)
+                        ws_f1.unmerge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=8)
                     except:
                         pass
-                    ws_f1.merge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=8)
+                    ws_f1.merge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=5)
                     break
 
-        # Nettoyage sécurisé H9/I9
-        h9 = ws_f1["H9"].value or ""
+        # Nettoyage de H9/I9 (devenues E9/F9 après suppression)
+        h9 = ws_f1["E9"].value or ""
         try:
-            i9 = ws_f1["I9"].value or ""
+            i9 = ws_f1["F9"].value or ""
         except:
             i9 = ""
-        ws_f1["H9"].value = f"{h9} {i9}".strip()
+        ws_f1["E9"].value = f"{h9} {i9}".strip()
 
         try:
-            ws_f1["I9"].value = None
+            ws_f1["F9"].value = None
         except:
             pass
 
         try:
-            ws_f1.merge_cells("H9:I9")
+            ws_f1.merge_cells("E9:F9")
         except:
             pass
 
-        # Ajout du champ "N° de palette" en H11 avec le style de G11
-        ws_f1["H11"].value = "N° de palette"
-        if ws_f1["G11"].has_style:
+        # Ajout du champ "N° de palette" en G11 (devenu colonne E après suppression)
+        ws_f1["E11"].value = "N° de palette"
+        if ws_f1["D11"].has_style:
             for attr in ["font", "border", "fill", "number_format", "protection", "alignment"]:
-                setattr(ws_f1["H11"], attr, copy(getattr(ws_f1["G11"], attr)))
+                setattr(ws_f1["E11"], attr, copy(getattr(ws_f1["D11"], attr)))
 
-        # Recherche V depuis F2 vers F1
+        # Recherche V depuis F2 vers F1 (sur colonne E maintenant)
         for row in range(12, ws_f1.max_row + 1):
             key = ws_f1[f"A{row}"].value
             if not key:
                 continue
             for r in ws_f2.iter_rows(min_row=1, max_col=5):
                 if r[3].value == key:
-                    ws_f1[f"H{row}"].value = r[4].value
+                    ws_f1[f"E{row}"].value = r[4].value
                     break
 
         # Sauvegarde dans la mémoire
