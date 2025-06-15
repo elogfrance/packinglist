@@ -13,22 +13,20 @@ st.set_page_config(
 # Affichage du logo
 st.image("logo_marketparts.png", width=200)
 
-# Titre de l'application
+# Titre principal
 st.title("Bienvenue dans l’outil e-LOG")
-st.markdown("### Veuillez choisir un module à utiliser ci-dessous :")
+st.markdown("### Veuillez choisir un outil ci-dessous 👇")
 
-# Menu de sélection
-choix = st.selectbox(
-    "📌 Sélectionnez l’outil à lancer :",
-    [
-        "🔹 Générateur de packing list",
-        "🆕 Nouvel outil (F3 / F4)"
-    ]
-)
+# Séparateur
+st.markdown("---")
 
-# Redirection dynamique vers le module choisi
-if choix == "🔹 Générateur de packing list":
-    packing_list.run()
+# Deux colonnes pour les boutons
+col1, col2 = st.columns(2)
 
-elif choix == "🆕 Nouvel outil (F3 / F4)":
-    nouvel_outil.run()
+with col1:
+    if st.button("🧾 Générateur de Packing List"):
+        packing_list.run()
+
+with col2:
+    if st.button("🆕 Nouvel outil (F3 / F4)"):
+        nouvel_outil.run()
