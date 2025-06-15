@@ -2,6 +2,8 @@ import streamlit as st
 
 # ➊ Récupérer le paramètre 'tool' dans l'URL
 tool = st.query_params.get("tool", [None])[0]
+st.write("DEBUG tool =", tool)
+
 
 # ➋ Configuration de la page (toujours le premier appel Streamlit)
 st.set_page_config(page_title="Outils E-LOG", layout="centered")
