@@ -1,31 +1,29 @@
 import streamlit as st
-from applications import packing_list, nouvel_outil
+import pandas as pd
+from openpyxl import load_workbook
+from copy import copy
+from io import BytesIO
 from PIL import Image
 
-st.set_page_config(page_title="Outils e-LOG", page_icon="📦", layout="centered")
+def run():
+    # Bouton retour à l’accueil
+    if st.button("⬅️ Retour à l’accueil"):
+        st.experimental_set_query_params(page="home")
+        st.rerun()
 
-st.image("logo_marketparts.png", width=200)
-st.title("Bienvenue dans l’outil e-LOG")
-st.markdown("### Veuillez choisir un outil 👇")
-st.markdown("---")
+    # Affichage du logo
+    logo = Image.open("logo_marketparts.png")
+    st.image(logo, width=400)
 
-# Deux colonnes pour les boutons
-col1, col2 = st.columns(2)
+    # Titre principal
+    st.markdown(
+        "<h1 style='color:#3a4e9f; font-size:24px;'>Générateur de Packing List</h1>",
+        unsafe_allow_html=True
+    )
 
-# Drapeaux de déclenchement
-launch_tool = None
+    # Upload des fichiers
+    col1, col2 = st.columns(2)
 
-with col1:
-    if st.button("🧾 Générateur de Packing List"):
-        launch_tool = "packing"
-
-with col2:
-    if st.button("🆕 Nouvel outil (F3 / F4)"):
-        launch_tool = "nouvel"
-
-# Lancement du bon outil immédiatement après le clic
-if launch_tool == "packing":
-    packing_list.run()
-
-elif launch_tool == "nouvel":
-    nouvel_outil.run()
+    with col1:
+        uploaded_f1 = st.file_uploader("📁 1. Importer le fichier TO SHIP", type=["xlsx"], key="f1")
+        with st.expa
