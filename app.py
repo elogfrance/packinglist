@@ -11,19 +11,18 @@ if "page" not in st.session_state:
 
 # Page d'accueil
 if st.session_state.page == "home":
-    st.image("logo_marketparts.png", width=200)
-    st.title("Bienvenue dans l’outil e-LOG")
+    st.image("logo_marketparts.png", width=400)
     st.markdown("### Veuillez choisir un outil 👇")
     st.markdown("---")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("🧾 Générateur de Packing List"):
+        if st.button("Packing List"):
             st.session_state.page = "packing"
 
     with col2:
-        if st.button("🆕 Nouvel outil (F3 / F4)"):
+        if st.button("Packing liste autodoc"):
             st.session_state.page = "nouvel"
 
 # Page : Packing list
