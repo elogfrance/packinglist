@@ -1,18 +1,20 @@
+# applications/packing_list.py
+
 def run():
     import streamlit as st
     import pandas as pd
     from openpyxl import load_workbook
     from copy import copy
     from io import BytesIO
+    import os
     from PIL import Image
 
-    # → Ton code V4 original commence ici
+    # Chemin absolu vers le dossier racine du projet
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 
-    # Configuration spécifique à cet outil
-    # (NOTE : st.set_page_config a été déplacé dans app.py)
-    #
-    # Affichage du logo
-    logo = Image.open("assets/logo_marketparts.png")
+    # Charger le logo depuis assets/
+    logo_path = os.path.join(BASE_DIR, "assets", "logo_marketparts.png")
+    logo = Image.open(logo_path)
     st.image(logo, width=400)
 
     # Titre principal
@@ -21,37 +23,48 @@ def run():
         unsafe_allow_html=True
     )
 
-    # Upload des fichiers F1 et F2
+    # Import des fichiers F1 et F2
     col1, col2 = st.columns(2)
     with col1:
         uploaded_f1 = st.file_uploader("📁 1. Importer le fichier TO SHIP", type=["xlsx"], key="f1")
         with st.expander("📎 Voir le template (F1)"):
-            st.image("assets/template_f1.png", caption="Exemple de fichier TO SHIP")
+            template1 = os.path.join(BASE_DIR, "assets", "template_f1.png")
+            st.image(template1, caption="Exemple de fichier TO SHIP")
     with col2:
         uploaded_f2 = st.file_uploader("📁 2. Importer le fichier E LOG", type=["xlsx"], key="f2")
         with st.expander("📎 Voir le template (F2)"):
-            st.image("assets/template_f2.png", caption="Exemple de fichier E LOG")
+            template2 = os.path.join(BASE_DIR, "assets", "template_f2.png")
+            st.image(template2, caption="Exemple de fichier E LOG")
 
-    # Traitement dès que les deux fichiers sont fournis
+    # Traitement automatique dès que les deux fichiers sont fournis
     if uploaded_f1 and uploaded_f2:
-        # Lecture Excel
+        # Lecture des données Excel
         df1 = pd.read_excel(uploaded_f1, engine="openpyxl")
         df2 = pd.read_excel(uploaded_f2, engine="openpyxl")
 
-        # … ici toutes tes étapes de nettoyage, vlookup, formatage …
-        # par exemple :
+        # --- Ici, place ta logique de nettoyage, vlookup et mise en forme ---
+        # Exemples :
         # from modules.excel_formatter import format_excel_file
         # df_final = format_excel_file(df1, df2)
+        #
+        # OU si tu as un module vlookup_logic :
+        # from modules.vlookup_logic import apply_vlookup
+        # df1_with_vlookup = apply_vlookup(df1, df2)
 
-        # Mise en mémoire et téléchargement
+        # Pour l’exemple, on réutilise df1 comme df_final
+        df_final = df1.copy()
+
+        # Préparer le buffer pour téléchargement
         buffer = BytesIO()
-        # df_final.to_excel(buffer, index=False)
-        # buffer.seek(0)
+        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+            df_final.to_excel(writer, index=False, sheet_name="PackingList")
+            writer.save()
+        buffer.seek(0)
+
         st.success("Fichier traité avec succès")
         st.download_button(
             "📥 Télécharger le fichier final",
             data=buffer,
-            file_name="packing_list_output.xlsx"
+            file_name="packing_list_output.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
-    # → Ton code V4 original se termine ici
