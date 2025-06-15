@@ -1,4 +1,9 @@
 import streamlit as st
+import streamlit as st
+
+def run():
+    st.success("🎉 Le générateur de packing list a bien été lancé !")
+
 
 def run():
     st.header("📦 Générateur de packing list")
