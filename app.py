@@ -1,42 +1,31 @@
 import streamlit as st
 from applications import packing_list, nouvel_outil
 from PIL import Image
-from streamlit.runtime.scriptrunner import rerun  # ✅ nouvelle façon de forcer le refresh
 
 st.set_page_config(page_title="Outils e-LOG", page_icon="📦", layout="centered")
 
-if "page" not in st.session_state:
-    st.session_state.page = "home"
+st.image("logo_marketparts.png", width=200)
+st.title("Bienvenue dans l’outil e-LOG")
+st.markdown("### Veuillez choisir un outil 👇")
+st.markdown("---")
 
-# Page d'accueil
-if st.session_state.page == "home":
-    st.image("logo_marketparts.png", width=200)
-    st.title("Bienvenue dans l’outil e-LOG")
-    st.markdown("### Veuillez choisir un outil 👇")
-    st.markdown("---")
+# Deux colonnes pour les boutons
+col1, col2 = st.columns(2)
 
-    col1, col2 = st.columns(2)
+# Drapeaux de déclenchement
+launch_tool = None
 
-    with col1:
-        if st.button("🧾 Générateur de Packing List"):
-            st.session_state.page = "packing"
-            rerun()  # 🔁 recharge immédiate avec nouveau module
+with col1:
+    if st.button("🧾 Générateur de Packing List"):
+        launch_tool = "packing"
 
-    with col2:
-        if st.button("🆕 Nouvel outil (F3 / F4)"):
-            st.session_state.page = "nouvel"
-            rerun()
+with col2:
+    if st.button("🆕 Nouvel outil (F3 / F4)"):
+        launch_tool = "nouvel"
 
-# Page : Packing list
-elif st.session_state.page == "packing":
-    if st.button("⬅️ Retour à l'accueil"):
-        st.session_state.page = "home"
-        rerun()
+# Lancement du bon outil immédiatement après le clic
+if launch_tool == "packing":
     packing_list.run()
 
-# Page : Nouvel outil
-elif st.session_state.page == "nouvel":
-    if st.button("⬅️ Retour à l'accueil"):
-        st.session_state.page = "home"
-        rerun()
+elif launch_tool == "nouvel":
     nouvel_outil.run()
