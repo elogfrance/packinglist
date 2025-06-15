@@ -1,6 +1,6 @@
 import streamlit as st
 
-# ➋ Configuration de la page (toujours en tout premier)
+# ➋ Configuration de la page (toujours en premier)
 st.set_page_config(page_title="Outils E-LOG", layout="centered")
 
 # ➊ Récupérer le paramètre 'tool' via l'API stable
@@ -30,11 +30,11 @@ else:
 
     with col1:
         if st.button("📦 Packing List"):
-            # Écrire le paramètre 'tool' via l'API stable
-            st.set_query_params(tool="packing_list")
+            # On utilise l'API expérimentale pour écrire le paramètre
+            st.experimental_set_query_params(tool="packing_list")
             st.experimental_rerun()
 
     with col2:
         if st.button("🧾 Packing List Autodoc"):
-            st.set_query_params(tool="autodoc")
+            st.experimental_set_query_params(tool="autodoc")
             st.experimental_rerun()
