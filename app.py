@@ -3,7 +3,7 @@ import streamlit as st
 # ➊ Récupérer le paramètre 'tool' dans l'URL
 tool = st.query_params.get("tool", [None])[0]
 
-# ➋ Configuration de la page (toujours le premier appel Streamlit)
+# ➋ Configuration de la page
 st.set_page_config(page_title="Outils E-LOG", layout="centered")
 
 # ➌ Routing selon le paramètre 'tool'
@@ -30,7 +30,7 @@ else:
 
     # Vignette Packing List
     link1 = (
-        '<a href="?tool=packing_list" target="_blank" style="text-decoration: none;">'
+        '<a href="./?tool=packing_list" target="_blank" style="text-decoration: none;">'
         '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
         'border-radius:8px;">'
         '📦<br><strong>Packing List</strong>'
@@ -39,7 +39,7 @@ else:
 
     # Vignette Packing List Autodoc
     link2 = (
-        '<a href="?tool=autodoc" target="_blank" style="text-decoration: none;">'
+        '<a href="./?tool=autodoc" target="_blank" style="text-decoration: none;">'
         '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
         'border-radius:8px;">'
         '🧾<br><strong>Packing List Autodoc</strong>'
