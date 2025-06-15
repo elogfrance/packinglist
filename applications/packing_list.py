@@ -5,12 +5,6 @@ from copy import copy
 from io import BytesIO
 from PIL import Image
 
-# Configuration de la page
-st.set_page_config(
-    page_title="Générateur de Packing List",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Affichage du logo
 logo = Image.open("logo_marketparts.png")
