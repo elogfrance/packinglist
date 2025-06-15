@@ -2,6 +2,7 @@ import streamlit as st
 
 # ➊ Récupérer le paramètre 'tool' dans l'URL
 tool = st.query_params.get("tool", [None])[0]
+base_url = st.experimental_get_url().split("?")[0]
 
 
 
