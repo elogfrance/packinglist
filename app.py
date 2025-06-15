@@ -49,10 +49,18 @@ if uploaded_f1 and uploaded_f2:
         wb_f2 = load_workbook(uploaded_f2, data_only=True)
         ws_f2 = wb_f2.active
 
-        # Suppression des colonnes "Unit Price" et "Total Price"
-        headers = [cell.value for cell in ws_f1[11]]
-        for idx in sorted([i for i, h in enumerate(headers) if h in ["Unit Price", "Total Price"]], reverse=True):
-            ws_f1.delete_cols(idx + 1)
+    # Suppression sécurisée des colonnes "Unit Price" et "Total Price" à partir de la ligne 11
+header_row_idx = 11
+headers = [cell.value for cell in ws_f1[header_row_idx]]
+
+# Recherche des colonnes à supprimer
+cols_to_delete = [i for i, h in enumerate(headers) if h in ["Unit Price", "Total Price"]]
+
+# Suppression en partant de la droite pour éviter les décalages
+for col_idx in sorted(cols_to_delete, reverse=True):
+    col_letter = chr(65 + col_idx)  # A=65, B=66...
+    ws_f1.delete_cols(col_idx + 1)
+
 
         # Fusion de la cellule "Delivery Note / Bon de livraison" de A à H
         for row in ws_f1.iter_rows(min_row=1, max_row=20, max_col=8):
