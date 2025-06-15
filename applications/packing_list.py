@@ -1,4 +1,10 @@
+
 import streamlit as st
+
+def run():
+    st.header("📦 Générateur de packing list")
+    st.info("⚙️ Le traitement complet sera intégré ici.")
+
 import pandas as pd
 from openpyxl import load_workbook
 from copy import copy
