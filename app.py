@@ -31,23 +31,26 @@ else:
 
     col1, col2 = st.columns(2)
 
-    # Vignette Packing List
-    link1 = (
-        '<a href="?tool=packing_list" target="_blank" style="text-decoration: none;">'
-        '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
-        'border-radius:8px;">'
-        '📦<br><strong>Packing List</strong>'
-        '</div></a>'
-    )
+   # Vignette Packing List
+link1 = (
+    f'<a href="{base_url}?tool=packing_list" target="_blank" '
+    'style="text-decoration: none;">'
+    '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
+    'border-radius:8px;">'
+    '📦<br><strong>Packing List</strong>'
+    '</div></a>'
+)
 
-    # Vignette Packing List Autodoc
-    link2 = (
-        '<a href="?tool=autodoc" target="_blank" style="text-decoration: none;">'
-        '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
-        'border-radius:8px;">'
-        '🧾<br><strong>Packing List Autodoc</strong>'
-        '</div></a>'
-    )
+# Vignette Packing List Autodoc
+link2 = (
+    f'<a href="{base_url}?tool=autodoc" target="_blank" '
+    'style="text-decoration: none;">'
+    '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
+    'border-radius:8px;">'
+    '🧾<br><strong>Packing List Autodoc</strong>'
+    '</div></a>'
+)
+
 
     col1.markdown(link1, unsafe_allow_html=True)
     col2.markdown(link2, unsafe_allow_html=True)
