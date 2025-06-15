@@ -37,6 +37,8 @@ with col1:
 
 with col2:
     uploaded_f2 = st.file_uploader("📁 2. Importer le fichier E LOG", type=["xlsx"], key="f2")
+      with st.expander("📎 Voir le template (F1)"):
+        st.image("templateF2.png", caption="Exemple de fichier E LOG")
 
 
 # Traitement à l'appui du bouton
