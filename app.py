@@ -22,23 +22,18 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 # Import F1 et F2 en colonnes séparées
 col1, col2 = st.columns(2)
 
 with col1:
     uploaded_f1 = st.file_uploader("📁 1. Importer le fichier TO SHIP", type=["xlsx"], key="f1")
-    
     with st.expander("📎 Voir le template (F1)"):
         st.image("template_f1.png", caption="Exemple de fichier TO SHIP")
 
 with col2:
     uploaded_f2 = st.file_uploader("📁 2. Importer le fichier E LOG", type=["xlsx"], key="f2")
-    
     with st.expander("📎 Voir le template (F2)"):
         st.image("template_f2.png", caption="Exemple de fichier E LOG")
-
-
 
 # Traitement à l'appui du bouton
 if uploaded_f1 and uploaded_f2:
@@ -49,18 +44,15 @@ if uploaded_f1 and uploaded_f2:
         wb_f2 = load_workbook(uploaded_f2, data_only=True)
         ws_f2 = wb_f2.active
 
-    # Suppression sécurisée des colonnes "Unit Price" et "Total Price" à partir de la ligne 11
-header_row_idx = 11
-headers = [cell.value for cell in ws_f1[header_row_idx]]
-
-# Recherche des colonnes à supprimer
-cols_to_delete = [i for i, h in enumerate(headers) if h in ["Unit Price", "Total Price"]]
-
-# Suppression en partant de la droite pour éviter les décalages
-for col_idx in sorted(cols_to_delete, reverse=True):
-    col_letter = chr(65 + col_idx)  # A=65, B=66...
-    ws_f1.delete_cols(col_idx + 1)
-
+        # Suppression sécurisée des colonnes "Unit Price" et "Total Price" à partir de la ligne 11
+        try:
+            header_row_idx = 11
+            headers = [cell.value for cell in ws_f1[header_row_idx]]
+            cols_to_delete = [i for i, h in enumerate(headers) if h in ["Unit Price", "Total Price"]]
+            for col_idx in sorted(cols_to_delete, reverse=True):
+                ws_f1.delete_cols(col_idx + 1)
+        except Exception as e:
+            st.warning(f"⚠️ Erreur lors de la suppression des colonnes : {e}")
 
         # Fusion de la cellule "Delivery Note / Bon de livraison" de A à H
         for row in ws_f1.iter_rows(min_row=1, max_row=20, max_col=8):
@@ -112,7 +104,6 @@ for col_idx in sorted(cols_to_delete, reverse=True):
         wb_f1.save(output)
         output.seek(0)
 
-     
         # Bouton de téléchargement
         st.download_button(
             label="Télécharger packing list excel",
