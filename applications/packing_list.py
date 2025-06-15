@@ -6,10 +6,7 @@ from io import BytesIO
 from PIL import Image
 
 def run():
-    # Bouton retour à l’accueil
-    if st.button("⬅️ Retour à l’accueil"):
-        st.experimental_set_query_params()
-        st.stop()
+
 
     # Affichage du logo
     logo = Image.open("logo_marketparts.png")
