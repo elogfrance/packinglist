@@ -1,7 +1,8 @@
 import streamlit as st
 
-# ➊ Récupérer le paramètre 'tool' dans l'URL
-tool = st.query_params.get("tool", [None])[0]
+# ➊ Récupérer le paramètre 'tool' avec l'API expérimentale
+params = st.experimental_get_query_params()
+tool = params.get("tool", [None])[0]
 
 # ➋ Configuration de la page (toujours le premier appel Streamlit)
 st.set_page_config(page_title="Outils E-LOG", layout="centered")
@@ -16,7 +17,7 @@ elif tool == "autodoc":
     autodoc.run()
 
 else:
-    # Menu principal
+    # Menu principal par boutons
     st.markdown(
         "<h1 style='text-align: center; color: #3a4e9f;'>🧰 Outils E-LOG</h1>",
         unsafe_allow_html=True
@@ -30,6 +31,7 @@ else:
 
     with col1:
         if st.button("📦 Packing List"):
+            # On utilise l'API expérimentale pour setter et relancer
             st.experimental_set_query_params(tool="packing_list")
             st.experimental_rerun()
 
