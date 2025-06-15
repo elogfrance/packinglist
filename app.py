@@ -1,6 +1,8 @@
 import streamlit as st
 from applications import packing_list, nouvel_outil
 from PIL import Image
+if "page" not in st.session_state:
+    st.session_state.page = "home"
 
 # Configuration de la page
 st.set_page_config(page_title="Outils e-LOG", page_icon="📦", layout="centered")
