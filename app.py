@@ -1,18 +1,18 @@
 import streamlit as st
 
-# ➋ Configuration de la page (toujours en tout premier)
+# ➊ Configuration de la page (toujours en tout premier)
 st.set_page_config(page_title="Outils E-LOG", layout="centered")
 
-# ➊ Récupérer le paramètre 'tool' via l'API expérimentale
-params = st.experimental_get_query_params()
-tool = params.get("tool", [None])[0]
+# ➋ Initialisation de session_state['tool']
+if "tool" not in st.session_state:
+    st.session_state.tool = None
 
-# ➌ Routing selon le paramètre 'tool'
-if tool == "packing_list":
+# ➌ Routing selon session_state.tool
+if st.session_state.tool == "packing_list":
     import applications.packing_list as pl
     pl.run()
 
-elif tool == "autodoc":
+elif st.session_state.tool == "autodoc":
     import applications.packing_list_autodoc as autodoc
     autodoc.run()
 
@@ -28,13 +28,11 @@ else:
     )
 
     col1, col2 = st.columns(2)
-
     with col1:
         if st.button("📦 Packing List"):
-            st.experimental_set_query_params(tool="packing_list")
+            st.session_state.tool = "packing_list"
             st.experimental_rerun()
-
     with col2:
         if st.button("🧾 Packing List Autodoc"):
-            st.experimental_set_query_params(tool="autodoc")
+            st.session_state.tool = "autodoc"
             st.experimental_rerun()
