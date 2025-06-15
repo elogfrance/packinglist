@@ -1,10 +1,9 @@
 import streamlit as st
 
-# ➊ Récupérer le paramètre 'tool' dans l'URL
-params = st.experimental_get_query_params()
-tool = params.get("tool", [None])[0]
+# ➊ Récupérer le paramètre 'tool' dans l'URL (remplacement de experimental_get_query_params)
+tool = st.query_params.get("tool", [None])[0]
 
-# ➋ Configuration de la page (toujours en premier appel Streamlit)
+# ➋ Configuration de la page (toujours le premier appel Streamlit)
 st.set_page_config(page_title="Outils E-LOG", layout="centered")
 
 # ➌ Routing selon le paramètre 'tool'
@@ -33,12 +32,22 @@ else:
     link1 = (
         '<a href="?tool=packing_list" target="_blank" '
         'style="text-decoration: none;">'
-        '<div style="padding:20px; text-align:center; '
-        'border:1px solid #ddd; border-radius:8px;">'
+        '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
+        'border-radius:8px;">'
         '📦<br><strong>Packing List</strong>'
         '</div></a>'
     )
 
     # Vignette Packing List Autodoc
     link2 = (
-        '<a h
+        '<a href="?tool=autodoc" target="_blank" '
+        'style="text-decoration: none;">'
+        '<div style="padding:20px; text-align:center; border:1px solid #ddd; '
+        'border-radius:8px;">'
+        '🧾<br><strong>Packing List Autodoc</strong>'
+        '</div></a>'
+    )
+
+    col1.markdown(link1, unsafe_allow_html=True)
+    col2.markdown(link2, unsafe_allow_html=True)
+
