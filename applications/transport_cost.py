@@ -1,7 +1,12 @@
 import streamlit as st
 import pandas as pd
 import math
-from io import BytesIO
+from pathlib import Path
+
+TARIF_PATH = (
+    Path(__file__).resolve().parent.parent / "data" / "tarifs_merged.xlsx"
+)
+
 
 ###############################################################################
 # CONSTANTES – barème des frais                                              #
