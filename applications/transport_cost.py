@@ -49,7 +49,6 @@ def arrondi_dizaine_sup(val: float) -> int:
 
 
 def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int):
-    """Retourne (tarif €/100kg, libellé_colonne, borne_inf, borne_sup) ou None."""
     mask = (
         df["Pays"].str.contains(pays, case=False, na=False)
         & (df["Zone"].astype(str) == str(zone))
@@ -66,7 +65,7 @@ def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int):
                 cols.append((high, low, c))
             except ValueError:
                 continue
-    cols.sort(key=lambda x: x[0])  # ordre bornes hautes croissant
+    cols.sort(key=lambda x: x[0])
 
     for high, low, col in cols:
         if poids <= high:
@@ -152,20 +151,18 @@ def main():
     # ---------------- Affichage ----------------
     st.header("Résultat – Coûts export (HT)")
 
-    # Méthode rappel
     st.markdown(
         """**Méthode “Coûts export”** &nbsp;: Poids taxable = max(poids réel, volume×250) → dizaine sup.  
         Coût = (poids/100 × tarif) + 10 % fuel + frais fixes + options → min 75 € HT."""
     )
 
-    # ---- Tableau Paramètres ----
     parametres = {
         "Palettes": " • ".join(
             f"{l:.0f}×{w:.0f}×{h:.0f} / {p:.0f} kg"
             for l, w, h, p in pal[["Long(cm)", "Larg(cm)", "Haut(cm)", "Poids(kg)"].values]
         ),
         "Pays / zone": f"{pays} – {zone}",
-        "Options": "  •  ".join([*("✔ Produits dangereux" if opt_dg else "",), *("✔ RDV tél. manuel" if opt_rdv else "",)]).strip("  •  ") or "—",
+        "Options": "  •  ".join(filter(None, ["✔ Produits dangereux" if opt_dg else "", "✔ RDV tél. manuel" if opt_rdv else ""])) or "—",
         "Poids réel total": f"{total_reel:.0f} kg",
         "Volume total": f"{total_vol:.4f} m³ × {VOL_FACTOR} = {total_vol*VOL_FACTOR:.0f} kg",
         "Poids taxable": f"max({total_reel:.0f} ; {total_vol*VOL_FACTOR:.0f}) → {poids_taxable:.0f} kg → arrondi → {poids_arr} kg",
@@ -173,7 +170,6 @@ def main():
     }
     st.table(pd.Series(parametres, name="Valeur"))
 
-    # ---- Tableau coûts ----
     lignes = [
         ("Fret", fret_ht),
         (f"Surcharge fuel {FUEL_PCT:.0f}%", fuel_ht),
@@ -184,5 +180,5 @@ def main():
     sous_tot = sum(v for _, v in lignes)
     lignes.append(("Sous-total", sous_tot))
     lignes.append(("TOTAL HT", total_ht))
-st.table(pd.DataFrame(lignes, columns=["Poste", "Montant €"]).set_index("Poste"))
 
+    st.table(pd.DataFrame(lignes, columns=["Poste", "Montant €"]).set_index("Poste"))
