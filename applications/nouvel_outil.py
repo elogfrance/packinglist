@@ -1,100 +1,134 @@
 import streamlit as st
 import pandas as pd
 from openpyxl import load_workbook
-from copy import copy
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.drawing.image import Image as OpenpyxlImage
+from openpyxl.worksheet.properties import WorksheetProperties, PageSetupProperties
 from io import BytesIO
 from PIL import Image
+import tempfile
+
 
 def run():
+    st.title("🆕 Traitement personnalisé F1 + F2")
 
-
-    # Affichage du logo
-    logo = Image.open("logo_marketparts.png")
-    st.image(logo, width=400)
-
-    # Titre principal
-    st.markdown(
-        "<h1 style='color:#3a4e9f; font-size:24px;'>Générateur de Packing List</h1>",
-        unsafe_allow_html=True
-    )
-
-    # Upload des fichiers
+    # Upload fichiers F1 et F2
     col1, col2 = st.columns(2)
-
     with col1:
-        uploaded_f1 = st.file_uploader("📁 1. Importer le fichier TO SHIP", type=["xlsx"], key="f1")
-        with st.expander("📎 Voir le template (F1)"):
-            st.image("template_f1.png", caption="Exemple de fichier TO SHIP")
-
+        uploaded_f1 = st.file_uploader("📁 Fichier F1 (TO SHIP)", type=["xlsx"], key="f1")
     with col2:
-        uploaded_f2 = st.file_uploader("📁 2. Importer le fichier E LOG", type=["xlsx"], key="f2")
-        with st.expander("📎 Voir le template (F2)"):
-            st.image("template_f2.png", caption="Exemple de fichier E LOG")
+        uploaded_f2 = st.file_uploader("📁 Fichier F2 (E LOG)", type=["xlsx"], key="f2")
 
-    # Traitement
     if uploaded_f1 and uploaded_f2:
         try:
-            wb_f1 = load_workbook(uploaded_f1)
+            # Sauver fichiers temporaires
+            temp_f1 = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+            temp_f1.write(uploaded_f1.read())
+            temp_f1.seek(0)
+
+            temp_f2 = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+            temp_f2.write(uploaded_f2.read())
+            temp_f2.seek(0)
+
+            # Charger fichiers
+            wb_f1 = load_workbook(temp_f1.name)
             ws_f1 = wb_f1.active
-            wb_f2 = load_workbook(uploaded_f2, data_only=True)
-            ws_f2 = wb_f2.active
+            df_f2 = pd.read_excel(temp_f2.name, sheet_name=0)
 
-            headers = [cell.value for cell in ws_f1[11]]
-            for idx in sorted([i for i, h in enumerate(headers) if h in ["Unit Price", "Total Price"]], reverse=True):
-                ws_f1.delete_cols(idx + 1)
+            # Préparer dictionnaire de correspondance
+            df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
+            df_f2["N° pal "] = df_f2["N° pal "]
+            colis_to_palette = dict(zip(df_f2["Package Number"], df_f2["N° pal "]))
 
-            for row in ws_f1.iter_rows(min_row=1, max_row=20, max_col=8):
+            # Identifier colonnes clés dans F1
+            headers = [cell.value for cell in ws_f1[10]]
+            col_n_colis = headers.index("N° COLIS") + 1
+            col_n_palette = headers.index("N° PALETTE") + 1
+            col_fournisseur = headers.index("Fournisseur") + 1
+
+            # Remplir colonnes "N° PALETTE" et "Fournisseur"
+            for row in ws_f1.iter_rows(min_row=11, max_row=ws_f1.max_row):
+                colis_val = str(row[col_n_colis - 1].value).strip() if row[col_n_colis - 1].value else None
+                if colis_val in colis_to_palette:
+                    row[col_n_palette - 1].value = colis_to_palette[colis_val]
+                row[col_fournisseur - 1].value = "MARKETPARTS"
+
+            # Vérification incohérences
+            f1_colis = [str(row[col_n_colis - 1].value).strip() for row in ws_f1.iter_rows(min_row=11, max_row=ws_f1.max_row) if row[col_n_colis - 1].value]
+            f2_colis = df_f2["Package Number"].dropna().astype(str).str.strip().tolist()
+
+            missing_in_f2 = sorted(set(f1_colis) - set(f2_colis))
+            missing_in_f1 = sorted(set(f2_colis) - set(f1_colis))
+
+            if missing_in_f2 or missing_in_f1:
+                st.warning("\n".join([
+                    "\n\n### ⚠️ Incohérences détectées :",
+                    f"- {len(missing_in_f2)} colis présents dans F1 mais absents de F2 : {', '.join(missing_in_f2) if missing_in_f2 else 'Aucun'}",
+                    f"- {len(missing_in_f1)} colis présents dans F2 mais absents de F1 : {', '.join(missing_in_f1) if missing_in_f1 else 'Aucun'}"
+                ]))
+
+            # Finalisation mise en page Excel (centrage, impression, bordures...)
+            for row in ws_f1.iter_rows(min_row=10, max_row=ws_f1.max_row):
                 for cell in row:
-                    if cell.value == "Delivery Note / Bon de livraison":
-                        try:
-                            ws_f1.unmerge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=9)
-                        except:
-                            pass
-                        ws_f1.merge_cells(start_row=cell.row, start_column=1, end_row=cell.row, end_column=8)
-                        break
+                    if cell.value:
+                        cell.alignment = Alignment(horizontal="center", vertical="center")
 
-            h9 = ws_f1["H9"].value or ""
-            try:
-                i9 = ws_f1["I9"].value or ""
-            except:
-                i9 = ""
-            ws_f1["H9"].value = f"{h9} {i9}".strip()
+            for col in range(1, 16):  # A à O = 1 à 15
+                cell = ws_f1.cell(row=10, column=col)
+                cell.fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
+                cell.font = Font(color="FFFFFF", bold=True)
 
+            thin_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            for row in ws_f1.iter_rows(min_row=10, max_row=ws_f1.max_row, min_col=1, max_col=15):
+                for cell in row:
+                    cell.border = thin_border
+
+            # Réglages impression et entête
+            ws_f1.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+            ws_f1.page_setup.fitToWidth = 1
+            ws_f1.page_setup.fitToHeight = 0
+            ws_f1.print_title_rows = "10:10"
+            ws_f1.oddFooter.center.text = "Page &[Page] / &[Pages]"
+
+            # Ajustement auto largeur des colonnes
+            for col in ws_f1.columns:
+                max_length = 0
+                column = col[0].column_letter
+                for cell in col:
+                    try:
+                        if cell.value:
+                            max_length = max(max_length, len(str(cell.value)))
+                    except:
+                        pass
+                ws_f1.column_dimensions[column].width = max_length + 2
+
+            # Ajouter logo si disponible
+            logo_path = "logo_marketparts.png"
             try:
-                ws_f1["I9"].value = None
+                logo = OpenpyxlImage(logo_path)
+                logo.width = int(logo.width * 0.36)
+                logo.height = int(logo.height * 0.36)
+                ws_f1.add_image(logo, "A1")
             except:
                 pass
 
-            try:
-                ws_f1.merge_cells("H9:I9")
-            except:
-                pass
-
-            ws_f1["H11"].value = "N° de palette"
-            if ws_f1["G11"].has_style:
-                for attr in ["font", "border", "fill", "number_format", "protection", "alignment"]:
-                    setattr(ws_f1["H11"], attr, copy(getattr(ws_f1["G11"], attr)))
-
-            for row in range(12, ws_f1.max_row + 1):
-                key = ws_f1[f"A{row}"].value
-                if not key:
-                    continue
-                for r in ws_f2.iter_rows(min_row=1, max_col=5):
-                    if r[3].value == key:
-                        ws_f1[f"H{row}"].value = r[4].value
-                        break
-
+            # Sauvegarder fichier en mémoire
             output = BytesIO()
             wb_f1.save(output)
             output.seek(0)
 
+            st.success("✅ Traitement terminé.")
             st.download_button(
-                label="📥 Télécharger la packing list au format Excel",
-                data=output.getvalue(),
-                file_name="PackingList.xlsx",
+                label="📥 Télécharger le fichier traité",
+                data=output,
+                file_name="PackingList_Traitée.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
         except Exception as e:
-            st.error(f"❌ Une erreur est survenue : {e}")
-            
+            st.error(f"❌ Erreur : {e}")
