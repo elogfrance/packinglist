@@ -27,17 +27,17 @@ if st.session_state.outil is None:
     st.markdown("---")
 
     # 1) Générateur de packing-list
-    if st.button("🧾 Générateur de Packing List", key="bouton_packing"):
+    if st.button("Générateur de Packing List standard", key="bouton_packing"):
         st.session_state.outil = "packing"
         st.rerun()
 
     # 2) Nouvel outil (F3 / F4)
-    if st.button("🆕 Nouvel outil (F3 / F4)", key="bouton_nouvel"):
+    if st.button("Générateur de Packing List Autodoc", key="bouton_nouvel"):
         st.session_state.outil = "nouvel"
         st.rerun()
 
     # 3) Coûts export  ← NEW
-    if st.button("🚚 Coûts export (HT)", key="bouton_export"):
+    if st.button("Coûts Transport", key="bouton_export"):
         st.session_state.outil = "export"
         st.rerun()
 
