@@ -80,7 +80,7 @@ def main():
     st.title("📦 Coûts export – Saisie palettes (HT)")
 
     if st.button("🔄 Réinitialiser le formulaire"):
-        st.experimental_rerun()
+     st.rerun()
 
     df_tar = load_tariff()
     pays_liste = sorted(df_tar["Pays"].dropna().unique())
