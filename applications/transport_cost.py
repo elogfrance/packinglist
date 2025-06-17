@@ -79,8 +79,12 @@ def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int):
 def main():
     st.title("📦 Coûts export – Saisie palettes (HT)")
 
-    if st.button("🔄 Réinitialiser le formulaire"):
-        st.experimental_rerun()
+if st.button("🔄 Réinitialiser le formulaire"):
+    from streamlit.runtime.scriptrunner import RerunException
+    from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+    ctx = get_script_run_ctx()
+    raise RerunException(ctx)
+
 
     df_tar = load_tariff()
     pays_liste = sorted(df_tar["Pays"].dropna().unique())
