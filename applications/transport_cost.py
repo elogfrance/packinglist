@@ -3,28 +3,25 @@ import pandas as pd
 import math
 from pathlib import Path
 
-TARIF_PATH = (
-    Path(__file__).resolve().parent.parent / "data" / "tarifs_merged.xlsx"
-)
+# ------------------------------------------------------------------
+# Localisation de la grille Excel (dossier data/)
+# ------------------------------------------------------------------
+TARIF_PATH = Path(__file__).resolve().parent.parent / "data" / "tarifs_merged.xlsx"
 
-###############################################################################
-# CONSTANTES – barème des frais                                              #
-###############################################################################
-
-# Frais fixes appliqués à chaque envoi
+# ------------------------------------------------------------------
+# Frais fixes et optionnels
+# ------------------------------------------------------------------
 FIXED_FEES_DEFAULT = {
     "Terme fixe administratif (EDI)": 3.51,
     "Risk Fee": 1.98,
 }
 
-# Frais optionnels autorisés
 OPTIONAL_FEES = {
     "Produits dangereux (base)": 18.54,
     "RDV tél. (manuel)": 15.80,
 }
 
-# Surcharges produits dangereux selon pays (supplément au base)
-DG_EXTRA = {
+DG_EXTRA = {        # surcoûts produits dangereux
     "GB": 60.02,
     "Finlande": 33.92,
     "Norvège": 33.92,
@@ -32,24 +29,25 @@ DG_EXTRA = {
     "Italie": 33.92,
 }
 
-MIN_PERCEPTION = 75.0  # Minimum de perception en € HT
+MIN_PERCEPTION = 75.0  # € HT
 
-###############################################################################
-# FONCTIONS UTILITAIRES                                                      #
-###############################################################################
-
-def load_tariff(upload: BytesIO) -> pd.DataFrame:
-    """Charge la grille tarifaire fusionnée (première feuille)."""
-    return pd.read_excel(upload, sheet_name=0)
+# ------------------------------------------------------------------
+# Fonctions utilitaires
+# ------------------------------------------------------------------
+@st.cache_data
+def load_tariff() -> pd.DataFrame:
+    """Charge la grille tarifaire stockée dans data/tarifs_merged.xlsx."""
+    if not TARIF_PATH.exists():
+        st.error(f"Grille tarifaire introuvable : {TARIF_PATH}")
+        st.stop()
+    return pd.read_excel(TARIF_PATH, sheet_name=0)
 
 
 def arrondi_dizaine_superieure(val: float) -> int:
-    """Arrondit au multiple de 10 supérieur."""
     return int(math.ceil(val / 10.0) * 10)
 
 
 def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int) -> float | None:
-    """Retourne le tarif €/100 kg pour le couple (pays, zone) et le poids donné."""
     mask = (
         df["Pays"].str.contains(pays, case=False, na=False)
         & (df["Zone"].astype(str) == str(zone))
@@ -67,29 +65,23 @@ def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int) -> float | N
             return row[col]
     return None
 
-###############################################################################
-# INTERFACE STREAMLIT – MÉTHODE « COÛTS EXPORT »                             #
-###############################################################################
-
+# ------------------------------------------------------------------
+# Interface Streamlit – Méthode « Coûts export »
+# ------------------------------------------------------------------
 def main():
     st.title("📦 Calcul des Coûts export (HT)")
 
-    upload = st.file_uploader("Grille tarifaire fusionnée (.xlsx)", type=["xlsx"])
-    if upload is None:
-        st.info("Chargez un fichier pour commencer.")
-        return
+    # 1) Charger la grille depuis /data
+    df_tar = load_tariff()
+    st.markdown(
+        f"Grille tarifaire chargée (**{len(df_tar):,} lignes**). "
+        "Renseignez votre destination et vos paramètres :"
+    )
 
-    @st.cache_data
-    def _df(u):
-        return load_tariff(u)
-
-    df_tar = _df(upload)
-
-    # ----------------------------- Formulaire -----------------------------
+    # 2) Formulaire
     with st.form("form"):
         col1, col2 = st.columns(2)
 
-        # Colonne 1 : destination + base
         with col1:
             pays = st.text_input("Pays", value="France")
             zone = st.text_input("Zone (CP / code zone)", value="69")
@@ -100,7 +92,6 @@ def main():
                 "Surcharge carburant (%)", min_value=0.0, value=10.0, step=0.1
             )
 
-        # Colonne 2 : options
         with col2:
             st.markdown("### Options")
             opt_dg = st.checkbox("Produits dangereux")
@@ -111,7 +102,7 @@ def main():
     if not submitted:
         return
 
-    # -------------------------- Calcul transport --------------------------
+    # 3) Calcul transport
     poids_arr = arrondi_dizaine_superieure(poids_input)
     tarif = find_tariff(df_tar, pays, zone, poids_arr)
     if tarif is None or pd.isna(tarif):
@@ -121,10 +112,9 @@ def main():
     fret_ht = (poids_arr / 100.0) * tarif
     fuel_ht = fret_ht * fuel_pct / 100.0
 
-    # ------------------------ Frais fixes & options -----------------------
+    # 4) Frais fixes + options
     frais = FIXED_FEES_DEFAULT.copy()
 
-    # Produits dangereux
     if opt_dg:
         montant_dg = OPTIONAL_FEES["Produits dangereux (base)"]
         for key, extra in DG_EXTRA.items():
@@ -133,13 +123,12 @@ def main():
                 break
         frais["Produits dangereux"] = montant_dg
 
-    # RDV téléphone manuel
     if opt_rdv:
         frais["RDV tél. (manuel)"] = OPTIONAL_FEES["RDV tél. (manuel)"]
 
     total_frais = sum(frais.values())
 
-    # Minimum de perception
+    # 5) Minimum de perception
     sous_total_ht = fret_ht + fuel_ht + total_frais
     if sous_total_ht < MIN_PERCEPTION:
         frais["Minimum de perception"] = MIN_PERCEPTION - sous_total_ht
@@ -148,12 +137,11 @@ def main():
 
     total_ht = sous_total_ht
 
-    # ------------------------------- Output -------------------------------
+    # 6) Affichage
     st.header("Résultat – Coûts export (HT)")
     st.write(f"**Poids taxable arrondi : {poids_arr} kg**")
     st.success(f"**TOTAL HT À FACTURER : {total_ht:,.2f} €**")
 
-    # Panneau de détail
     with st.expander("🧾 Détail complet HT"):
         lignes = [
             ["Fret (tarif tranche)", f"{tarif:,.2f} €/100 kg", poids_arr / 100, fret_ht],
@@ -169,6 +157,5 @@ def main():
         st.write(f"**Total HT : {total_ht:,.2f} €**")
 
 
-# Point d’entrée Streamlit (utile si lancé directement)
 if __name__ == "__main__":
     main()
