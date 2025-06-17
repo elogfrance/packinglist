@@ -77,7 +77,7 @@ def main():
     st.title("📦 Coûts export – Saisie palettes (HT)")
 
     # Bouton de réinitialisation
-    if st.button("\ud83d\udd04 Réinitialiser le formulaire"):
+   if st.button("Réinitialiser le formulaire"):
         st.experimental_rerun()
 
     df_tar = load_tariff()
