@@ -9,7 +9,7 @@ from io import BytesIO
 import tempfile
 
 def run():
-    st.title("🆕 Générateur Packing List Formatée (F1 + F2)")
+    st.title("Générateur Packing List Autodoc")
 
     # Upload des fichiers F1 et F2
     f1 = st.file_uploader("📁 Fichier F1 (TO SHIP)", type=["xlsx"], key="f1")
