@@ -163,8 +163,7 @@ def main():
         "Palettes": " • ".join(
             f"{l:.0f}×{w:.0f}×{h:.0f} / {p:.0f} kg"
             for l, w, h, p in pal[["Long(cm)", "Larg(cm)", "Haut(cm)", "Poids(kg)"]].values:
-        )
-        
+        ),
         "Pays / zone": f"{pays} – {zone}",
         "Options": "  •  ".join(filter(None, ["✔ Produits dangereux" if opt_dg else "", "✔ RDV tél. manuel" if opt_rdv else ""])) or "—",
         "Poids réel total": f"{total_reel:.0f} kg",
