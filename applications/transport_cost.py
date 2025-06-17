@@ -4,12 +4,12 @@ import math
 from pathlib import Path
 
 # ------------------------------------------------------------------
-# Localisation de la grille Excel (dossier data/)
+# Chemin vers la grille Excel
 # ------------------------------------------------------------------
 TARIF_PATH = Path(__file__).resolve().parent.parent / "data" / "tarifs_merged.xlsx"
 
 # ------------------------------------------------------------------
-# Frais fixes et optionnels
+# Barème des frais fixes et optionnels
 # ------------------------------------------------------------------
 FIXED_FEES_DEFAULT = {
     "Terme fixe administratif (EDI)": 3.51,
@@ -21,7 +21,7 @@ OPTIONAL_FEES = {
     "RDV tél. (manuel)": 15.80,
 }
 
-DG_EXTRA = {        # surcoûts produits dangereux
+DG_EXTRA = {
     "GB": 60.02,
     "Finlande": 33.92,
     "Norvège": 33.92,
@@ -36,14 +36,13 @@ MIN_PERCEPTION = 75.0  # € HT
 # ------------------------------------------------------------------
 @st.cache_data
 def load_tariff() -> pd.DataFrame:
-    """Charge la grille tarifaire stockée dans data/tarifs_merged.xlsx."""
     if not TARIF_PATH.exists():
         st.error(f"Grille tarifaire introuvable : {TARIF_PATH}")
         st.stop()
     return pd.read_excel(TARIF_PATH, sheet_name=0)
 
 
-def arrondi_dizaine_superieure(val: float) -> int:
+def arrondi_dizaine_sup(val: float) -> int:
     return int(math.ceil(val / 10.0) * 10)
 
 
@@ -60,8 +59,7 @@ def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int) -> float | N
     cols.sort(key=lambda c: float(c.split(" kg")[0].split("-")[1]))
 
     for col in cols:
-        upper = float(col.split(" kg")[0].split("-")[1])
-        if poids <= upper:
+        if poids <= float(col.split(" kg")[0].split("-")[1]):
             return row[col]
     return None
 
@@ -71,19 +69,19 @@ def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int) -> float | N
 def main():
     st.title("📦 Calcul des Coûts export (HT)")
 
-    # 1) Charger la grille depuis /data
     df_tar = load_tariff()
+    pays_liste = sorted(df_tar["Pays"].dropna().unique())
+
     st.markdown(
         f"Grille tarifaire chargée (**{len(df_tar):,} lignes**). "
         "Renseignez votre destination et vos paramètres :"
     )
 
-    # 2) Formulaire
     with st.form("form"):
         col1, col2 = st.columns(2)
 
         with col1:
-            pays = st.text_input("Pays", value="France")
+            pays = st.selectbox("Pays", pays_liste, index=pays_liste.index("France") if "France" in pays_liste else 0)
             zone = st.text_input("Zone (CP / code zone)", value="69")
             poids_input = st.number_input(
                 "Poids taxable ou réel (kg)", min_value=0.0, value=350.0, step=0.1
@@ -102,8 +100,8 @@ def main():
     if not submitted:
         return
 
-    # 3) Calcul transport
-    poids_arr = arrondi_dizaine_superieure(poids_input)
+    # ---------------- Calcul transport ----------------
+    poids_arr = arrondi_dizaine_sup(poids_input)
     tarif = find_tariff(df_tar, pays, zone, poids_arr)
     if tarif is None or pd.isna(tarif):
         st.error("Tarif introuvable pour cette destination / zone.")
@@ -112,13 +110,13 @@ def main():
     fret_ht = (poids_arr / 100.0) * tarif
     fuel_ht = fret_ht * fuel_pct / 100.0
 
-    # 4) Frais fixes + options
+    # --------------- Frais fixes + options ------------
     frais = FIXED_FEES_DEFAULT.copy()
 
     if opt_dg:
         montant_dg = OPTIONAL_FEES["Produits dangereux (base)"]
         for key, extra in DG_EXTRA.items():
-            if pays.strip().lower().startswith(key.lower()):
+            if pays.lower().startswith(key.lower()):
                 montant_dg += extra
                 break
         frais["Produits dangereux"] = montant_dg
@@ -128,7 +126,6 @@ def main():
 
     total_frais = sum(frais.values())
 
-    # 5) Minimum de perception
     sous_total_ht = fret_ht + fuel_ht + total_frais
     if sous_total_ht < MIN_PERCEPTION:
         frais["Minimum de perception"] = MIN_PERCEPTION - sous_total_ht
@@ -137,7 +134,7 @@ def main():
 
     total_ht = sous_total_ht
 
-    # 6) Affichage
+    # ---------------- Affichage -----------------------
     st.header("Résultat – Coûts export (HT)")
     st.write(f"**Poids taxable arrondi : {poids_arr} kg**")
     st.success(f"**TOTAL HT À FACTURER : {total_ht:,.2f} €**")
@@ -150,10 +147,7 @@ def main():
         for lib, montant in frais.items():
             lignes.append([lib, "", "", montant])
 
-        df_lignes = pd.DataFrame(
-            lignes, columns=["Libellé", "Unitaire", "Qté/Coef.", "Montant € HT"]
-        )
-        st.table(df_lignes)
+        st.table(pd.DataFrame(lignes, columns=["Libellé", "Unitaire", "Qté/Coef.", "Montant € HT"]))
         st.write(f"**Total HT : {total_ht:,.2f} €**")
 
 
