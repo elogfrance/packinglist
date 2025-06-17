@@ -1,147 +1,187 @@
 import streamlit as st
 import pandas as pd
-from openpyxl import load_workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.drawing.image import Image as OpenpyxlImage
-from openpyxl.worksheet.properties import WorksheetProperties, PageSetupProperties
-from io import BytesIO
-import tempfile
+import math
+from pathlib import Path
 
-def run():
-    st.title("🆕 Générateur Packing List Formatée (F1 + F2)")
+# ------------------------------------------------------------------
+# FICHIER TARIFS (Excel fusionné dans data/)
+# ------------------------------------------------------------------
+TARIF_PATH = Path(__file__).resolve().parent.parent / "data" / "tarifs_merged.xlsx"
 
-    # Upload des fichiers F1 et F2
-    f1 = st.file_uploader("📁 Fichier F1 (TO SHIP)", type=["xlsx"], key="f1")
-    f2 = st.file_uploader("📁 Fichier F2 (E LOG)", type=["xlsx"], key="f2")
+# Paramètres globaux
+VOL_FACTOR = 250      # kg / m³
+FUEL_PCT   = 10.0     # surcharge carburant fixe
+MIN_PERCEPTION = 75.0 # € HT
 
-    if f1 and f2:
-        try:
-            # Chargement fichiers temporaires
-            temp_f1 = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-            temp_f1.write(f1.read())
-            temp_f1.seek(0)
-            temp_f2 = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-            temp_f2.write(f2.read())
-            temp_f2.seek(0)
+# Frais fixes (toujours appliqués)
+FIXED_FEES = {
+    "Terme fixe administratif": 3.51,
+    "Risk Fee": 1.98,
+}
 
-            df_f1 = pd.read_excel(temp_f1.name)
-            df_f2 = pd.read_excel(temp_f2.name)
+# Options facultatives
+OPTIONAL_FEES_BASE = {
+    "Produits dangereux (base)": 18.54,
+    "RDV tél. (manuel)": 15.80,
+}
 
-            # Nettoyage et correspondance
-            df_f1["N° COLIS"] = df_f1["Document number"].astype(str).str.strip()
-            df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
-            colis_to_palette = dict(zip(df_f2["Package Number"], df_f2["N° pal "]))
+DG_EXTRA = {  # majorations MD selon pays
+    "GB": 60.02,
+    "Finlande": 33.92,
+    "Norvège": 33.92,
+    "Suède": 33.92,
+    "Italie": 33.92,
+}
 
-            # Ordre et renommage
-            final_order = [
-                ("Fournisseur", None),
-                ("N° PALETTE", None),
-                ("Document number", "N° COLIS"),
-                ("Customer order number", "N° groupage"),
-                ("External Order Id", "ID AUTODOC"),
-                ("SO number", "SO number"),
-                ("Name", "Item Name"),
-                ("Brand", "Brand"),
-                ("SKU", "SKU"),
-                ("Internal reference", "Internal reference"),
-                ("Item description", "Item description"),
-                ("Quantity", "Quantity"),
-                ("GTIN (EAN)", "EAN"),
-                ("Date expédition", None),
-                ("Date réception", None),
-            ]
+# ------------------------------------------------------------------
+# Utils
+# ------------------------------------------------------------------
+@st.cache_data
+def load_tariff() -> pd.DataFrame:
+    if not TARIF_PATH.exists():
+        st.error(f"Grille introuvable : {TARIF_PATH}")
+        st.stop()
+    return pd.read_excel(TARIF_PATH, sheet_name=0)
 
-            df_final = pd.DataFrame()
-            for col_name, new_name in final_order:
-                if col_name in df_f1.columns:
-                    df_final[new_name or col_name] = df_f1[col_name]
-                else:
-                    df_final[new_name or col_name] = ""
 
-            df_final["N° PALETTE"] = df_final["N° COLIS"].map(colis_to_palette)
-            df_final["Fournisseur"] = "MARKETPARTS"
+def arrondi_dizaine_sup(val: float) -> int:
+    return int(math.ceil(val / 10) * 10)
 
-            # Correction EAN format texte
-            df_final["EAN"] = df_final["EAN"].astype(str).str.zfill(13)
 
-            # Sauvegarde temporaire Excel
-            output = BytesIO()
-            df_final.to_excel(output, index=False)
-            output.seek(0)
-            wb = load_workbook(output)
-            ws = wb.active
+def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int):
+    mask = (
+        df["Pays"].str.contains(pays, case=False, na=False)
+        & (df["Zone"].astype(str) == str(zone))
+    )
+    if not mask.any():
+        return None
+    row = df.loc[mask].iloc[0]
 
-            # Assurer que la colonne "N° COLIS" est bien présente
-            header_row_idx = 10
-            headers = [str(cell.value).strip().lower() if cell.value else "" for cell in ws[header_row_idx]]
-            if "n° colis" not in headers:
-                st.error("❌ Erreur : La colonne 'N° COLIS' n'a pas été trouvée dans la ligne d'en-tête (ligne 10).")
-                return
-
-            # Formatage
-            ws.insert_rows(1, amount=9)
-            ws["I4"] = "Packing List/ Colisage"
-            ws["I4"].font = Font(name="Helvetica", size=36)
-            client_name = str(df_f2.iloc[0, 0])
-            ws["E7"] = client_name
-            unique_palettes = set(ws.cell(row=i, column=2).value for i in range(11, ws.max_row + 1) if ws.cell(row=i, column=2).value)
-            ws["G7"] = len(unique_palettes)
-
-            # Fond blanc global
-            white_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-            for row in ws.iter_rows():
-                for cell in row:
-                    cell.fill = white_fill
-
-            # En-tête fond noir + police blanche + centrée
-            for col in range(1, 16):
-                cell = ws.cell(row=10, column=col)
-                cell.fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
-                cell.font = Font(color="FFFFFF", bold=True)
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-
-            # Bordures A à O + centrage
-            border = Border(left=Side(style="thin"), right=Side(style="thin"),
-                            top=Side(style="thin"), bottom=Side(style="thin"))
-            for row in ws.iter_rows(min_row=10, max_row=ws.max_row, min_col=1, max_col=15):
-                for cell in row:
-                    cell.border = border
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-
-            # Largeurs auto A à O
-            for col in ws.columns:
-                col_letter = col[0].column_letter
-                if col_letter > "O":
-                    continue
-                max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
-                ws.column_dimensions[col_letter].width = max_length + 2
-
-            # Impression et pied de page
-            ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
-            ws.page_setup.fitToWidth = 1
-            ws.page_setup.fitToHeight = 0
-            ws.print_title_rows = "10:10"
-            ws.oddFooter.center.text = "Page &[Page] / &[Pages]"
-
-            # Logo
+    cols = []
+    for c in df.columns:
+        if c.endswith("kg") and "-" in c:
             try:
-                logo = OpenpyxlImage("logo_marketparts.png")
-                logo.width = int(logo.width * 0.36)
-                logo.height = int(logo.height * 0.36)
-                ws.add_image(logo, "A1")
-            except Exception as e:
-                st.warning(f"⚠️ Erreur logo : {e}")
+                low, high = map(float, c.split(" kg")[0].split("-"))
+                cols.append((high, low, c))
+            except ValueError:
+                continue
+    cols.sort(key=lambda x: x[0])
 
-            # Export
-            final_output = BytesIO()
-            wb.save(final_output)
-            final_output.seek(0)
+    for high, low, col in cols:
+        if poids <= high:
+            return row[col], col, int(low), int(high)
+    return None
 
-            st.success("✅ Fichier généré avec succès")
-            st.download_button("📥 Télécharger le fichier formaté",
-                               data=final_output,
-                               file_name="PackingList_Formatée.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+# ------------------------------------------------------------------
+# APP
+# ------------------------------------------------------------------
 
-        except Exception as e:
-            st.error(f"❌ Erreur : {e}")
+def main():
+    st.title("📦 Coûts export – Saisie palettes (HT)")
+
+    if st.button("🔄 Réinitialiser le formulaire"):
+        st.experimental_rerun()
+
+    df_tar = load_tariff()
+    pays_liste = sorted(df_tar["Pays"].dropna().unique())
+
+    with st.form("form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            pays = st.selectbox("Pays", pays_liste, index=pays_liste.index("France") if "France" in pays_liste else 0)
+            zones = sorted(df_tar.loc[df_tar["Pays"].str.contains(pays, case=False, na=False), "Zone"].astype(str).unique())
+            zone = st.selectbox("Zone (CP / code zone)", zones)
+        with col2:
+            opt_dg = st.checkbox("Produits dangereux")
+            opt_rdv = st.checkbox("RDV tél. (manuel)")
+            st.markdown(f"Surcharge carburant fixe : **{FUEL_PCT:.1f}%**")
+
+        st.markdown("### Palettes (cm / kg)")
+        default_df = pd.DataFrame({"Long(cm)": [80], "Larg(cm)": [120], "Haut(cm)": [100], "Poids(kg)": [100]})
+        palettes = st.data_editor(default_df, num_rows="dynamic", use_container_width=True, key="palettes")
+        submitted = st.form_submit_button("💰 Calculer")
+
+    if not submitted:
+        return
+
+    palettes = palettes.dropna(how="all")
+    if palettes.empty:
+        st.error("Merci de saisir au moins une palette.")
+        return
+    try:
+        pal = palettes.astype(float)
+    except ValueError:
+        st.error("Toutes les valeurs doivent être numériques.")
+        return
+
+    vol_m3 = (pal["Long(cm)"] / 100) * (pal["Larg(cm)"] / 100) * (pal["Haut(cm)"] / 100)
+    poids_vol = vol_m3 * VOL_FACTOR
+    total_reel = pal["Poids(kg)"].sum()
+    total_vol = poids_vol.sum()
+
+    poids_taxable = max(total_reel, total_vol)
+    poids_arr = arrondi_dizaine_sup(poids_taxable)
+
+    res_tarif = find_tariff(df_tar, pays, zone, poids_arr)
+    if res_tarif is None:
+        st.error("Tarif introuvable pour cette destination / zone.")
+        return
+    tarif, col_label, borne_inf, borne_sup = res_tarif
+
+    fret_ht = (poids_arr / 100) * tarif
+    fuel_ht = fret_ht * FUEL_PCT / 100
+
+    frais = FIXED_FEES.copy()
+
+    if opt_dg:
+        md = OPTIONAL_FEES_BASE["Produits dangereux (base)"]
+        for k, extra in DG_EXTRA.items():
+            if pays.lower().startswith(k.lower()):
+                md += extra
+                break
+        frais["Produits dangereux"] = md
+    if opt_rdv:
+        frais["RDV tél. manuel"] = OPTIONAL_FEES_BASE["RDV tél. (manuel)"]
+
+    total_frais = sum(frais.values())
+    sous_total_ht = fret_ht + fuel_ht + total_frais
+    if sous_total_ht < MIN_PERCEPTION:
+        frais["Minimum 75 €"] = MIN_PERCEPTION - sous_total_ht
+        total_frais = sum(frais.values())
+        sous_total_ht = fret_ht + fuel_ht + total_frais
+    total_ht = sous_total_ht
+
+    # ---------------- Affichage ----------------
+    st.header("Résultat – Coûts export (HT)")
+
+    st.markdown(
+        """**Méthode “Coûts export”** &nbsp;: Poids taxable = max(poids réel, volume×250) → dizaine sup.  
+        Coût = (poids/100 × tarif) + 10 % fuel + frais fixes + options → min 75 € HT."""
+    )
+
+    parametres = {
+        "Palettes": " • ".join(
+            f"{l:.0f}×{w:.0f}×{h:.0f} / {p:.0f} kg"
+            for l, w, h, p in pal[["Long(cm)", "Larg(cm)", "Haut(cm)", "Poids(kg)"].values]
+        ),
+        "Pays / zone": f"{pays} – {zone}",
+        "Options": "  •  ".join(filter(None, ["✔ Produits dangereux" if opt_dg else "", "✔ RDV tél. manuel" if opt_rdv else ""])) or "—",
+        "Poids réel total": f"{total_reel:.0f} kg",
+        "Volume total": f"{total_vol:.4f} m³ × {VOL_FACTOR} = {total_vol*VOL_FACTOR:.0f} kg",
+        "Poids taxable": f"max({total_reel:.0f} ; {total_vol*VOL_FACTOR:.0f}) → {poids_taxable:.0f} kg → arrondi → {poids_arr} kg",
+        "Tarif appliqué": f"Tranche {borne_inf}-{borne_sup} kg – {tarif:,.2f} €/100 kg",
+    }
+    st.table(pd.Series(parametres, name="Valeur"))
+
+    lignes = [
+        ("Fret", fret_ht),
+        (f"Surcharge fuel {FUEL_PCT:.0f}%", fuel_ht),
+    ]
+    for lib, val in frais.items():
+        lignes.append((lib, val))
+
+    sous_tot = sum(v for _, v in lignes)
+    lignes.append(("Sous-total", sous_tot))
+    lignes.append(("TOTAL HT", total_ht))
+
+    st.table(pd.DataFrame(lignes, columns=["Poste", "Montant €"]).set_index("Poste"))
