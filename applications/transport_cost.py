@@ -43,8 +43,10 @@ def load_tariff() -> pd.DataFrame:
         st.stop()
     return pd.read_excel(TARIF_PATH, sheet_name=0)
 
+
 def arrondi_dizaine_sup(val: float) -> int:
     return int(math.ceil(val / 10) * 10)
+
 
 def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int):
     mask = (
@@ -73,11 +75,11 @@ def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int):
 # ------------------------------------------------------------------
 # APP
 # ------------------------------------------------------------------
+
 def main():
     st.title("📦 Coûts export – Saisie palettes (HT)")
 
-    # Bouton de réinitialisation
-    if st.button("\ud83d\udd04 Réinitialiser le formulaire"):
+    if st.button("🔄 Réinitialiser le formulaire"):
         st.experimental_rerun()
 
     df_tar = load_tariff()
@@ -153,7 +155,7 @@ def main():
     st.header("Résultat – Coûts export (HT)")
 
     st.markdown(
-        """**Méthode “Coûts export”**  : Poids taxable = max(poids réel, volume×250) → dizaine sup.  
+        """**Méthode “Coûts export”** &nbsp;: Poids taxable = max(poids réel, volume×250) → dizaine sup.  
         Coût = (poids/100 × tarif) + 10 % fuel + frais fixes + options → min 75 € HT."""
     )
 
@@ -183,7 +185,3 @@ def main():
     lignes.append(("TOTAL HT", total_ht))
 
     st.table(pd.DataFrame(lignes, columns=["Poste", "Montant €"]).set_index("Poste"))
-
-# Point d'entrée direct
-if __name__ == "__main__":
-    main()
