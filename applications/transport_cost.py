@@ -28,12 +28,38 @@ def arrondi_dizaine_sup(val: float) -> int:
 
 
 def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int) -> float | None:
+    """Renvoie le tarif €/100 kg pour (pays, zone) couvrant le poids donné.
+    Ignore les colonnes dont le libellé n'est pas strictement numérique-nuérique.
+    """
     mask = (
         df["Pays"].str.contains(pays, case=False, na=False)
         & (df["Zone"].astype(str) == str(zone))
     )
     if not mask.any():
         return None
+
+    row = df.loc[mask].iloc[0]
+
+    # Filtrer les colonnes tranche et extraire borne haute si possible
+    cols = []
+    for c in df.columns:
+        if c.endswith("kg") and "-" in c:
+            try:
+                upper = float(c.split(" kg")[0].split("-")[1])
+                cols.append((upper, c))
+            except ValueError:
+                continue  # colonne non numérique (ex. vide ou commentaire)
+
+    if not cols:
+        return None
+
+    # Ordonner par borne haute croissante
+    cols.sort(key=lambda x: x[0])
+
+    for upper, col in cols:
+        if poids <= upper:
+            return row[col]
+    return None
     row = df.loc[mask].iloc[0]
     cols = [c for c in df.columns if c.endswith("kg") and "-" in c]
     cols.sort(key=lambda c: float(c.split(" kg")[0].split("-")[1]))
