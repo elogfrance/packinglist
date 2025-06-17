@@ -4,28 +4,24 @@ import math
 from pathlib import Path
 
 # ------------------------------------------------------------------
-# FICHIER TARIFS (Excel fusionné dans data/)
+# Chemin vers la grille tarifaire
 # ------------------------------------------------------------------
 TARIF_PATH = Path(__file__).resolve().parent.parent / "data" / "tarifs_merged.xlsx"
 
-# Paramètres globaux
-VOL_FACTOR = 250      # kg / m³
-FUEL_PCT   = 10.0     # surcharge carburant fixe
-MIN_PERCEPTION = 75.0 # € HT
-
-# Frais fixes (toujours appliqués)
-FIXED_FEES = {
-    "Terme fixe administratif": 3.51,
+# ------------------------------------------------------------------
+# Barème de frais
+# ------------------------------------------------------------------
+FIXED_FEES_DEFAULT = {
+    "Terme fixe administratif (EDI)": 3.51,
     "Risk Fee": 1.98,
 }
 
-# Options facultatives
-OPTIONAL_FEES_BASE = {
+OPTIONAL_FEES = {
     "Produits dangereux (base)": 18.54,
     "RDV tél. (manuel)": 15.80,
 }
 
-DG_EXTRA = {  # majorations MD selon pays
+DG_EXTRA = {
     "GB": 60.02,
     "Finlande": 33.92,
     "Norvège": 33.92,
@@ -33,47 +29,50 @@ DG_EXTRA = {  # majorations MD selon pays
     "Italie": 33.92,
 }
 
-# ------------------------------------------------------------------
-# Utils
+MIN_PERCEPTION = 75.0  # € HT
+VOL_FACTOR = 250       # kg/m3
+FUEL_PCT = 10.0        # surcharge carburant fixe
+
 # ------------------------------------------------------------------
 @st.cache_data
 def load_tariff() -> pd.DataFrame:
     if not TARIF_PATH.exists():
-        st.error(f"Grille introuvable : {TARIF_PATH}")
+        st.error(f"Grille tarifaire introuvable : {TARIF_PATH}")
         st.stop()
     return pd.read_excel(TARIF_PATH, sheet_name=0)
 
 
 def arrondi_dizaine_sup(val: float) -> int:
-    return int(math.ceil(val / 10) * 10)
+    return int(math.ceil(val / 10.0) * 10)
 
 
-def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int):
+def find_tariff(df: pd.DataFrame, pays: str, zone: str, poids: int) -> float | None:
     mask = (
         df["Pays"].str.contains(pays, case=False, na=False)
         & (df["Zone"].astype(str) == str(zone))
     )
     if not mask.any():
         return None
-    row = df.loc[mask].iloc[0]
 
+    row = df.loc[mask].iloc[0]
     cols = []
     for c in df.columns:
         if c.endswith("kg") and "-" in c:
             try:
-                low, high = map(float, c.split(" kg")[0].split("-"))
-                cols.append((high, low, c))
+                upper = float(c.split(" kg")[0].split("-")[1])
+                cols.append((upper, c))
             except ValueError:
                 continue
+    if not cols:
+        return None
     cols.sort(key=lambda x: x[0])
-
-    for high, low, col in cols:
-        if poids <= high:
-            return row[col], col, int(low), int(high)
+    for upper, col in cols:
+        if poids <= upper:
+            return row[col]
     return None
 
 # ------------------------------------------------------------------
-# APP
+# App principale
 # ------------------------------------------------------------------
 
 def main():
@@ -86,99 +85,87 @@ def main():
         col1, col2 = st.columns(2)
         with col1:
             pays = st.selectbox("Pays", pays_liste, index=pays_liste.index("France") if "France" in pays_liste else 0)
-            zones = sorted(df_tar.loc[df_tar["Pays"].str.contains(pays, case=False, na=False), "Zone"].astype(str).unique())
-            zone = st.selectbox("Zone (CP / code zone)", zones)
+            zones_pays = sorted(df_tar.loc[df_tar["Pays"].str.contains(pays, case=False, na=False), "Zone"].astype(str).unique())
+            zone = st.selectbox("Zone (CP / code zone)", zones_pays)
         with col2:
+            st.markdown(f"Surcharge carburant fixe : **{FUEL_PCT:.1f}%**")
             opt_dg = st.checkbox("Produits dangereux")
             opt_rdv = st.checkbox("RDV tél. (manuel)")
-            st.markdown(f"Surcharge carburant fixe : **{FUEL_PCT:.1f}%**")
 
-        st.markdown("### Palettes (cm / kg)")
-        default_df = pd.DataFrame({"Long(cm)": [80], "Larg(cm)": [120], "Haut(cm)": [100], "Poids(kg)": [100]})
-        palettes = st.data_editor(default_df, num_rows="dynamic", use_container_width=True, key="palettes")
+        st.markdown("### Palettes (dimensions en cm & poids réel en kg)")
+        demo_df = pd.DataFrame({"Long(cm)": [80], "Larg(cm)": [120], "Haut(cm)": [100], "Poids(kg)": [100]})
+        data = st.data_editor(demo_df, num_rows="dynamic", use_container_width=True, key="palettes")
+
         submitted = st.form_submit_button("💰 Calculer")
 
     if not submitted:
         return
 
-    palettes = palettes.dropna(how="all")
-    if palettes.empty:
+    data = data.dropna(how="all")
+    if data.empty:
         st.error("Merci de saisir au moins une palette.")
         return
     try:
-        pal = palettes.astype(float)
+        data_numeric = data.astype(float)
     except ValueError:
         st.error("Toutes les valeurs doivent être numériques.")
         return
 
-    vol_m3 = (pal["Long(cm)"] / 100) * (pal["Larg(cm)"] / 100) * (pal["Haut(cm)"] / 100)
-    poids_vol = vol_m3 * VOL_FACTOR
-    total_reel = pal["Poids(kg)"].sum()
-    total_vol = poids_vol.sum()
+    vols_m3 = (data_numeric["Long(cm)"] / 100) * (data_numeric["Larg(cm)"] / 100) * (data_numeric["Haut(cm)"] / 100)
+    poids_vol = vols_m3 * VOL_FACTOR
+    poids_reel = data_numeric["Poids(kg)"]
 
+    total_reel = poids_reel.sum()
+    total_vol = poids_vol.sum()
     poids_taxable = max(total_reel, total_vol)
     poids_arr = arrondi_dizaine_sup(poids_taxable)
 
-    res_tarif = find_tariff(df_tar, pays, zone, poids_arr)
-    if res_tarif is None:
+    tarif = find_tariff(df_tar, pays, zone, poids_arr)
+    if tarif is None or pd.isna(tarif):
         st.error("Tarif introuvable pour cette destination / zone.")
         return
-    tarif, col_label, borne_inf, borne_sup = res_tarif
 
-    fret_ht = (poids_arr / 100) * tarif
-    fuel_ht = fret_ht * FUEL_PCT / 100
+    fret_ht = (poids_arr / 100.0) * tarif
+    fuel_ht = fret_ht * FUEL_PCT / 100.0
 
-    frais = FIXED_FEES.copy()
-
+    frais = FIXED_FEES_DEFAULT.copy()
     if opt_dg:
-        md = OPTIONAL_FEES_BASE["Produits dangereux (base)"]
-        for k, extra in DG_EXTRA.items():
-            if pays.lower().startswith(k.lower()):
-                md += extra
+        montant_dg = OPTIONAL_FEES["Produits dangereux (base)"]
+        for key, extra in DG_EXTRA.items():
+            if pays.lower().startswith(key.lower()):
+                montant_dg += extra
                 break
-        frais["Produits dangereux"] = md
+        frais["Produits dangereux"] = montant_dg
     if opt_rdv:
-        frais["RDV tél. manuel"] = OPTIONAL_FEES_BASE["RDV tél. (manuel)"]
+        frais["RDV tél. (manuel)"] = OPTIONAL_FEES["RDV tél. (manuel)"]
 
     total_frais = sum(frais.values())
     sous_total_ht = fret_ht + fuel_ht + total_frais
     if sous_total_ht < MIN_PERCEPTION:
-        frais["Minimum 75 €"] = MIN_PERCEPTION - sous_total_ht
+        frais["Minimum de perception"] = MIN_PERCEPTION - sous_total_ht
         total_frais = sum(frais.values())
         sous_total_ht = fret_ht + fuel_ht + total_frais
+
     total_ht = sous_total_ht
 
-    # ---------------- Affichage ----------------
+    # Affichage
     st.header("Résultat – Coûts export (HT)")
+    st.write(f"**Poids réel total : {total_reel:.2f} kg**")
+    st.write(f"**Poids volumétrique total : {total_vol:.2f} kg**")
+    st.write(f"**Poids taxable arrondi : {poids_arr} kg**")
+    st.success(f"**TOTAL HT À FACTURER : {total_ht:,.2f} €**")
 
-    st.markdown(
-        """**Méthode “Coûts export”** &nbsp;: Poids taxable = max(poids réel, volume×250) → dizaine sup.  
-        Coût = (poids/100 × tarif) + 10 % fuel + frais fixes + options → min 75 € HT."""
-    )
+    with st.expander("🧾 Détail complet HT"):
+        lignes = [
+            ["Fret (tarif tranche)", f"{tarif:,.2f} €/100 kg", poids_arr / 100, fret_ht],
+            [f"Surcharge carburant {FUEL_PCT:.1f}%", "—", "—", fuel_ht],
+        ]
+        for lib, montant in frais.items():
+            lignes.append([lib, "", "", montant])
+        st.table(pd.DataFrame(lignes, columns=["Libellé", "Unitaire", "Qté/Coef.", "Montant € HT"]))
+        st.markdown("**Données palettes :**")
+        st.dataframe(data_numeric.reset_index(drop=True))
 
-    parametres = {
-        "Palettes": " • ".join(
-            f"{l:.0f}×{w:.0f}×{h:.0f} / {p:.0f} kg"
-            for l, w, h, p in pal[["Long(cm)", "Larg(cm)", "Haut(cm)", "Poids(kg)"].values]
-        ),
-        "Pays / zone": f"{pays} – {zone}",
-        "Options": "  •  ".join(filter(None, ["✔ Produits dangereux" if opt_dg else "", "✔ RDV tél. manuel" if opt_rdv else ""])) or "—",
-        "Poids réel total": f"{total_reel:.0f} kg",
-        "Volume total": f"{total_vol:.4f} m³ × {VOL_FACTOR} = {total_vol*VOL_FACTOR:.0f} kg",
-        "Poids taxable": f"max({total_reel:.0f} ; {total_vol*VOL_FACTOR:.0f}) → {poids_taxable:.0f} kg → arrondi → {poids_arr} kg",
-        "Tarif appliqué": f"Tranche {borne_inf}-{borne_sup} kg – {tarif:,.2f} €/100 kg",
-    }
-    st.table(pd.Series(parametres, name="Valeur"))
 
-    lignes = [
-        ("Fret", fret_ht),
-        (f"Surcharge fuel {FUEL_PCT:.0f}%", fuel_ht),
-    ]
-    for lib, val in frais.items():
-        lignes.append((lib, val))
-
-    sous_tot = sum(v for _, v in lignes)
-    lignes.append(("Sous-total", sous_tot))
-    lignes.append(("TOTAL HT", total_ht))
-
-    st.table(pd.DataFrame(lignes, columns=["Poste", "Montant €"]).set_index("Poste"))
+if __name__ == "__main__":
+    main()
