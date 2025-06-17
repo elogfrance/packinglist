@@ -27,10 +27,13 @@ def run():
             df_f1 = pd.read_excel(temp_f1.name)
             df_f2 = pd.read_excel(temp_f2.name)
 
+            # Nettoyage des colonnes F2
+            df_f2.columns = df_f2.columns.str.strip()
+
             # Nettoyage et correspondance
             df_f1["N° COLIS"] = df_f1["Document number"].astype(str).str.strip()
             df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
-            colis_to_palette = dict(zip(df_f2["Package Number"], df_f2["N° pal "]))
+            colis_to_palette = dict(zip(df_f2["Package Number"], df_f2["N° pal"]))
 
             # Ordre et renommage
             final_order = [
