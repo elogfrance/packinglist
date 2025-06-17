@@ -183,4 +183,6 @@ def main():
 
     sous_tot = sum(v for _, v in lignes)
     lignes.append(("Sous-total", sous_tot))
-    lignes.append(("TOTAL HT", total
+    lignes.append(("TOTAL HT", total_ht))
+st.table(pd.DataFrame(lignes, columns=["Poste", "Montant €"]).set_index("Poste"))
+
