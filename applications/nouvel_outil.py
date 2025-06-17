@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import re
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.drawing.image import Image as OpenpyxlImage
@@ -27,10 +28,21 @@ def run():
             df_f1 = pd.read_excel(temp_f1.name)
             df_f2 = pd.read_excel(temp_f2.name)
 
+            # Nettoyage des colonnes F2
+            df_f2.columns = df_f2.columns.str.strip()
+
+            # Recherche automatique de la colonne contenant "pal" (insensible à la casse)
+            palette_col = next((col for col in df_f2.columns if re.search(r"\bpal\b", col, re.IGNORECASE)), None)
+
+            if not palette_col:
+                st.error("❌ Erreur : aucune colonne contenant le mot 'pal' n’a été trouvée dans F2.")
+                st.write("Colonnes disponibles :", df_f2.columns.tolist())
+                return
+
             # Nettoyage et correspondance
             df_f1["N° COLIS"] = df_f1["Document number"].astype(str).str.strip()
             df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
-            colis_to_palette = dict(zip(df_f2["Package Number"], df_f2["N° pal "]))
+            colis_to_palette = dict(zip(df_f2["Package Number"], df_f2[palette_col]))
 
             # Ordre et renommage
             final_order = [
