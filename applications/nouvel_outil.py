@@ -33,21 +33,24 @@ def run():
             ws_f1 = wb_f1.active
             df_f2 = pd.read_excel(temp_f2.name, sheet_name=0)
 
-            # Identifier dynamiquement la ligne d'en-tête contenant "N° COLIS"
+            # Identifier dynamiquement la ligne d'en-tête contenant "N° COLIS" (souple)
             header_row_idx = None
             for i, row in enumerate(ws_f1.iter_rows(min_row=1, max_row=30), start=1):
-                if any(cell.value == "N° COLIS" for cell in row):
+                values = [str(cell.value).strip().lower() if cell.value else "" for cell in row]
+                if any(v == "n° colis" for v in values):
                     header_row_idx = i
+                    headers = [str(cell.value).strip() if cell.value else "" for cell in row]
                     break
 
             if header_row_idx is None:
-                st.error("❌ Erreur : 'N° COLIS' n'a pas été trouvé dans le fichier F1.")
+                st.error("❌ Erreur : Aucune colonne 'N° COLIS' trouvée dans les 30 premières lignes du fichier F1.")
                 return
 
-            headers = [cell.value for cell in ws_f1[header_row_idx]]
-            col_n_colis = headers.index("N° COLIS") + 1
-            col_n_palette = headers.index("N° PALETTE") + 1
-            col_fournisseur = headers.index("Fournisseur") + 1
+            # Repérage des colonnes nécessaires (tolérant aux majuscules/minuscules)
+            headers_lower = [h.lower() for h in headers]
+            col_n_colis = headers_lower.index("n° colis") + 1
+            col_n_palette = headers_lower.index("n° palette") + 1
+            col_fournisseur = headers_lower.index("fournisseur") + 1
 
             # Nettoyage et mapping depuis F2
             df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
