@@ -21,7 +21,6 @@ def run():
 
     if uploaded_f1 and uploaded_f2:
         try:
-            # Sauver fichiers temporaires
             temp_f1 = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
             temp_f1.write(uploaded_f1.read())
             temp_f1.seek(0)
@@ -30,33 +29,39 @@ def run():
             temp_f2.write(uploaded_f2.read())
             temp_f2.seek(0)
 
-            # Charger fichiers
             wb_f1 = load_workbook(temp_f1.name)
             ws_f1 = wb_f1.active
             df_f2 = pd.read_excel(temp_f2.name, sheet_name=0)
 
-            # Préparer dictionnaire de correspondance
-            df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
-            df_f2["N° pal "] = df_f2["N° pal "]
-            colis_to_palette = dict(zip(df_f2["Package Number"], df_f2["N° pal "]))
+            # Identifier dynamiquement la ligne d'en-tête contenant "N° COLIS"
+            header_row_idx = None
+            for i, row in enumerate(ws_f1.iter_rows(min_row=1, max_row=30), start=1):
+                if any(cell.value == "N° COLIS" for cell in row):
+                    header_row_idx = i
+                    break
 
-            # Identifier colonnes clés dans F1
-            headers = [cell.value for cell in ws_f1[10]]
+            if header_row_idx is None:
+                st.error("❌ Erreur : 'N° COLIS' n'a pas été trouvé dans le fichier F1.")
+                return
+
+            headers = [cell.value for cell in ws_f1[header_row_idx]]
             col_n_colis = headers.index("N° COLIS") + 1
             col_n_palette = headers.index("N° PALETTE") + 1
             col_fournisseur = headers.index("Fournisseur") + 1
 
-            # Remplir colonnes "N° PALETTE" et "Fournisseur"
-            for row in ws_f1.iter_rows(min_row=11, max_row=ws_f1.max_row):
+            # Nettoyage et mapping depuis F2
+            df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
+            df_f2["N° pal "] = df_f2["N° pal "]
+            colis_to_palette = dict(zip(df_f2["Package Number"], df_f2["N° pal "]))
+
+            for row in ws_f1.iter_rows(min_row=header_row_idx+1, max_row=ws_f1.max_row):
                 colis_val = str(row[col_n_colis - 1].value).strip() if row[col_n_colis - 1].value else None
                 if colis_val in colis_to_palette:
                     row[col_n_palette - 1].value = colis_to_palette[colis_val]
                 row[col_fournisseur - 1].value = "MARKETPARTS"
 
-            # Vérification incohérences
-            f1_colis = [str(row[col_n_colis - 1].value).strip() for row in ws_f1.iter_rows(min_row=11, max_row=ws_f1.max_row) if row[col_n_colis - 1].value]
+            f1_colis = [str(row[col_n_colis - 1].value).strip() for row in ws_f1.iter_rows(min_row=header_row_idx+1, max_row=ws_f1.max_row) if row[col_n_colis - 1].value]
             f2_colis = df_f2["Package Number"].dropna().astype(str).str.strip().tolist()
-
             missing_in_f2 = sorted(set(f1_colis) - set(f2_colis))
             missing_in_f1 = sorted(set(f2_colis) - set(f1_colis))
 
@@ -67,14 +72,13 @@ def run():
                     f"- {len(missing_in_f1)} colis présents dans F2 mais absents de F1 : {', '.join(missing_in_f1) if missing_in_f1 else 'Aucun'}"
                 ]))
 
-            # Finalisation mise en page Excel (centrage, impression, bordures...)
-            for row in ws_f1.iter_rows(min_row=10, max_row=ws_f1.max_row):
+            for row in ws_f1.iter_rows(min_row=header_row_idx, max_row=ws_f1.max_row):
                 for cell in row:
                     if cell.value:
                         cell.alignment = Alignment(horizontal="center", vertical="center")
 
-            for col in range(1, 16):  # A à O = 1 à 15
-                cell = ws_f1.cell(row=10, column=col)
+            for col in range(1, 16):
+                cell = ws_f1.cell(row=header_row_idx, column=col)
                 cell.fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
                 cell.font = Font(color="FFFFFF", bold=True)
 
@@ -84,18 +88,16 @@ def run():
                 top=Side(style='thin'),
                 bottom=Side(style='thin')
             )
-            for row in ws_f1.iter_rows(min_row=10, max_row=ws_f1.max_row, min_col=1, max_col=15):
+            for row in ws_f1.iter_rows(min_row=header_row_idx, max_row=ws_f1.max_row, min_col=1, max_col=15):
                 for cell in row:
                     cell.border = thin_border
 
-            # Réglages impression et entête
             ws_f1.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
             ws_f1.page_setup.fitToWidth = 1
             ws_f1.page_setup.fitToHeight = 0
-            ws_f1.print_title_rows = "10:10"
+            ws_f1.print_title_rows = f"{header_row_idx}:{header_row_idx}"
             ws_f1.oddFooter.center.text = "Page &[Page] / &[Pages]"
 
-            # Ajustement auto largeur des colonnes
             for col in ws_f1.columns:
                 max_length = 0
                 column = col[0].column_letter
@@ -107,9 +109,8 @@ def run():
                         pass
                 ws_f1.column_dimensions[column].width = max_length + 2
 
-            # Ajouter logo si disponible
-            logo_path = "logo_marketparts.png"
             try:
+                logo_path = "logo_marketparts.png"
                 logo = OpenpyxlImage(logo_path)
                 logo.width = int(logo.width * 0.36)
                 logo.height = int(logo.height * 0.36)
@@ -117,7 +118,6 @@ def run():
             except:
                 pass
 
-            # Sauvegarder fichier en mémoire
             output = BytesIO()
             wb_f1.save(output)
             output.seek(0)
