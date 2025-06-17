@@ -71,15 +71,16 @@ def run():
             wb = load_workbook(output)
             ws = wb.active
 
-            # Assurer que la colonne "N° COLIS" est bien présente
+            # Formatage
+            ws.insert_rows(1, amount=9)
+
+            # Vérifier que la colonne 'N° COLIS' est bien présente ligne 10 (après insertion)
             header_row_idx = 10
             headers = [str(cell.value).strip().lower() if cell.value else "" for cell in ws[header_row_idx]]
             if "n° colis" not in headers:
                 st.error("❌ Erreur : La colonne 'N° COLIS' n'a pas été trouvée dans la ligne d'en-tête (ligne 10).")
                 return
 
-            # Formatage
-            ws.insert_rows(1, amount=9)
             ws["I4"] = "Packing List/ Colisage"
             ws["I4"].font = Font(name="Helvetica", size=36)
             client_name = str(df_f2.iloc[0, 0])
