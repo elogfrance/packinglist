@@ -28,7 +28,7 @@ def run():
             df_f2 = pd.read_excel(temp_f2.name)
 
             # Nettoyage et correspondance
-            df_f1["N° COLIS"] = df_f1["Document number"].astype(str).str.strip()
+            df_f1["Document number"] = df_f1["N° colis"].astype(str).str.strip()
             df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
             colis_to_palette = dict(zip(df_f2["Package Number"], df_f2["N° pal "]))
 
