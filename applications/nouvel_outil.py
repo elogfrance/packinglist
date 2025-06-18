@@ -141,13 +141,12 @@ def run():
                     st.markdown("---")
 
                 if only_in_f1:
-    st.markdown("#### 🔴 Documents présents dans F1 mais absents de F2")
-    st.dataframe(pd.DataFrame(only_in_f1, columns=["Document F1 non trouvé dans F2"]))
+                    st.error(f"🚫 {len(only_in_f1)} document(s) trouvés dans F1 mais absents de F2 :")
+                    st.markdown("**Exemples :** " + ", ".join(only_in_f1[:10]) + ("..." if len(only_in_f1) > 10 else ""))
 
-if only_in_f2:
-    st.markdown("#### 🟠 Packages présents dans F2 mais absents de F1")
-    st.dataframe(pd.DataFrame(only_in_f2, columns=["Package F2 non trouvé dans F1"]))
-
+                if only_in_f2:
+                    st.warning(f"⚠️ {len(only_in_f2)} package(s) trouvés dans F2 mais absents de F1 :")
+                    st.markdown("**Exemples :** " + ", ".join(only_in_f2[:10]) + ("..." if len(only_in_f2) > 10 else ""))
 
             except Exception as e:
                 st.error(f"❌ Erreur lors de la vérification des correspondances F1/F2 : {e}")
