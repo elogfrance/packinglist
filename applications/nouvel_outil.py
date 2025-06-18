@@ -126,38 +126,33 @@ def run():
                 st.warning(f"⚠️ Erreur logo : {e}")
 
             # === VÉRIFICATION VISUELLE DES CORRESPONDANCES ===
-            try:
-                f1_values = set(df_f1["Document number"].dropna().astype(str).str.strip())
-                f2_values = set(df_f2["Package Number"].dropna().astype(str).str.strip())
+           # === VÉRIFICATION VISUELLE DES CORRESPONDANCES ===
+try:
+    def normalize(val):
+        return str(val).strip().replace('\xa0', '').replace('\n', '').replace('\r', '').lower()
 
-                only_in_f1 = sorted(f1_values - f2_values)
-                only_in_f2 = sorted(f2_values - f1_values)
+    f1_series = df_f1["Document number"].dropna().map(normalize)
+    f2_series = df_f2["Package Number"].dropna().map(normalize)
 
-                if only_in_f1 or only_in_f2:
-                    st.markdown("### ⚠️ Résumé des écarts entre F1 et F2")
-                    st.markdown("---")
+    f1_values = set(f1_series)
+    f2_values = set(f2_series)
 
-                if only_in_f1:
-                    st.error(f"🚫 {len(only_in_f1)} document(s) trouvés dans F1 mais absents de F2 :")
-                    st.markdown("**Exemples :** " + ", ".join(only_in_f1[:10]) + ("..." if len(only_in_f1) > 10 else ""))
+    only_in_f1 = sorted(f1_values - f2_values)
+    only_in_f2 = sorted(f2_values - f1_values)
 
-                if only_in_f2:
-                    st.warning(f"⚠️ {len(only_in_f2)} package(s) trouvés dans F2 mais absents de F1 :")
-                    st.markdown("**Exemples :** " + ", ".join(only_in_f2[:10]) + ("..." if len(only_in_f2) > 10 else ""))
+    if only_in_f1 or only_in_f2:
+        st.markdown("### ⚠️ Résumé des écarts entre F1 et F2")
+        st.markdown("---")
 
-            except Exception as e:
-                st.error(f"❌ Erreur lors de la vérification des correspondances F1/F2 : {e}")
+    if only_in_f1:
+        st.error(f"🚫 {len(only_in_f1)} document(s) trouvés dans F1 mais absents de F2 :")
+        st.markdown("**Exemples :** " + ", ".join(only_in_f1[:10]) + ("..." if len(only_in_f1) > 10 else ""))
 
-            # Export final
-            final_output = BytesIO()
-            wb.save(final_output)
-            final_output.seek(0)
+    if only_in_f2:
+        st.warning(f"⚠️ {len(only_in_f2)} package(s) trouvés dans F2 mais absents de F1 :")
+        st.markdown("**Exemples :** " + ", ".join(only_in_f2[:10]) + ("..." if len(only_in_f2) > 10 else ""))
 
-            st.success("✅ Fichier généré avec succès")
-            st.download_button("📥 Télécharger le fichier formaté",
-                               data=final_output,
-                               file_name="PackingList_Formatée.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+except Exception as e:
+    st.error(f"❌ Erreur lors de la vérification des correspondances F1/F2 : {e}")
 
-        except Exception as e:
-            st.error(f"❌ Erreur : {e}")
+
