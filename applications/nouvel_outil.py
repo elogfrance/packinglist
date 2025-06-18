@@ -28,23 +28,18 @@ def run():
             df_f1 = pd.read_excel(temp_f1.name)
             df_f2 = pd.read_excel(temp_f2.name)
 
-                       # Nettoyage des colonnes F2
+            # Nettoyage des colonnes F2
             df_f2.columns = df_f2.columns.str.strip()
-
-            # Recherche automatique de la colonne contenant "pal" (insensible à la casse)
             palette_col = next((col for col in df_f2.columns if re.search(r"\bpal\b", col, re.IGNORECASE)), None)
-
             if not palette_col:
                 st.error("❌ Erreur : aucune colonne contenant le mot 'pal' n’a été trouvée dans F2.")
                 st.write("Colonnes disponibles :", df_f2.columns.tolist())
                 return
 
-            # Nettoyage et correspondance
             df_f1["N° COLIS"] = df_f1["Document number"].astype(str).str.strip()
             df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
             colis_to_palette = dict(zip(df_f2["Package Number"], df_f2[palette_col]))
 
-            # Ordre et renommage
             final_order = [
                 ("Fournisseur", None),
                 ("N° PALETTE", None),
@@ -65,28 +60,19 @@ def run():
 
             df_final = pd.DataFrame()
             for col_name, new_name in final_order:
-                if col_name in df_f1.columns:
-                    df_final[new_name or col_name] = df_f1[col_name]
-                else:
-                    df_final[new_name or col_name] = ""
+                df_final[new_name or col_name] = df_f1[col_name] if col_name in df_f1.columns else ""
 
             df_final["N° PALETTE"] = df_final["N° COLIS"].map(colis_to_palette)
             df_final["Fournisseur"] = "MARKETPARTS"
-
-            # Correction EAN format texte
             df_final["EAN"] = df_final["EAN"].astype(str).str.zfill(13)
 
-            # Sauvegarde temporaire Excel
             output = BytesIO()
             df_final.to_excel(output, index=False)
             output.seek(0)
             wb = load_workbook(output)
             ws = wb.active
 
-            # Formatage
             ws.insert_rows(1, amount=9)
-
-            # Vérifier que la colonne 'N° COLIS' est bien présente ligne 10 (après insertion)
             header_row_idx = 10
             headers = [str(cell.value).strip().lower() if cell.value else "" for cell in ws[header_row_idx]]
             if "n° colis" not in headers:
@@ -100,20 +86,17 @@ def run():
             unique_palettes = set(ws.cell(row=i, column=2).value for i in range(11, ws.max_row + 1) if ws.cell(row=i, column=2).value)
             ws["G7"] = len(unique_palettes)
 
-            # Fond blanc global
             white_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
             for row in ws.iter_rows():
                 for cell in row:
                     cell.fill = white_fill
 
-            # En-tête fond noir + police blanche + centrée
             for col in range(1, 16):
                 cell = ws.cell(row=10, column=col)
                 cell.fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
                 cell.font = Font(color="FFFFFF", bold=True)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
-            # Bordures A à O + centrage
             border = Border(left=Side(style="thin"), right=Side(style="thin"),
                             top=Side(style="thin"), bottom=Side(style="thin"))
             for row in ws.iter_rows(min_row=10, max_row=ws.max_row, min_col=1, max_col=15):
@@ -121,7 +104,6 @@ def run():
                     cell.border = border
                     cell.alignment = Alignment(horizontal="center", vertical="center")
 
-            # Largeurs auto A à O
             for col in ws.columns:
                 col_letter = col[0].column_letter
                 if col_letter > "O":
@@ -129,14 +111,12 @@ def run():
                 max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
                 ws.column_dimensions[col_letter].width = max_length + 2
 
-            # Impression et pied de page
             ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
             ws.page_setup.fitToWidth = 1
             ws.page_setup.fitToHeight = 0
             ws.print_title_rows = "10:10"
             ws.oddFooter.center.text = "Page &[Page] / &[Pages]"
 
-            # Logo
             try:
                 logo = OpenpyxlImage("logo_marketparts.png")
                 logo.width = int(logo.width * 0.36)
@@ -145,7 +125,30 @@ def run():
             except Exception as e:
                 st.warning(f"⚠️ Erreur logo : {e}")
 
-            # Export
+            # === VÉRIFICATION VISUELLE DES CORRESPONDANCES ===
+            try:
+                f1_values = set(df_f1["Document number"].dropna().astype(str).str.strip())
+                f2_values = set(df_f2["Package Number"].dropna().astype(str).str.strip())
+
+                only_in_f1 = sorted(f1_values - f2_values)
+                only_in_f2 = sorted(f2_values - f1_values)
+
+                if only_in_f1 or only_in_f2:
+                    st.markdown("### ⚠️ Résumé des écarts entre F1 et F2")
+                    st.markdown("---")
+
+                if only_in_f1:
+                    st.error(f"🚫 {len(only_in_f1)} document(s) trouvés dans F1 mais absents de F2 :")
+                    st.markdown("**Exemples :** " + ", ".join(only_in_f1[:10]) + ("..." if len(only_in_f1) > 10 else ""))
+
+                if only_in_f2:
+                    st.warning(f"⚠️ {len(only_in_f2)} package(s) trouvés dans F2 mais absents de F1 :")
+                    st.markdown("**Exemples :** " + ", ".join(only_in_f2[:10]) + ("..." if len(only_in_f2) > 10 else ""))
+
+            except Exception as e:
+                st.error(f"❌ Erreur lors de la vérification des correspondances F1/F2 : {e}")
+
+            # Export final
             final_output = BytesIO()
             wb.save(final_output)
             final_output.seek(0)
@@ -158,35 +161,3 @@ def run():
 
         except Exception as e:
             st.error(f"❌ Erreur : {e}")
-
-            # === INSERTION VÉRIFICATION DE CORRESPONDANCE ===
-            try:
-                f1_values = set(df_f1["Document number"].dropna().astype(str).str.strip())
-                f2_values = set(df_f2["Package Number"].dropna().astype(str).str.strip())
-
-                only_in_f1 = f1_values - f2_values
-                only_in_f2 = f2_values - f1_values
-
-                if only_in_f1:
-                    st.warning("⚠️ Attention : les documents suivants sont dans F1 mais absents de F2 :")
-                    st.write(sorted(only_in_f1))
-
-                if only_in_f2:
-                    st.warning("⚠️ Attention : les packages suivants sont dans F2 mais absents de F1 :")
-                    st.write(sorted(only_in_f2))
-
-            except Exception as e:
-                st.error(f"Erreur lors de la vérification des correspondances F1/F2 : {e}")
-
-            # === Export final ===
-            output = BytesIO()
-            wb.save(output)
-            st.download_button(
-                label="📥 Télécharger le fichier final",
-                data=output.getvalue(),
-                file_name="packing_list_final.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-        except Exception as e:
-            st.error(f"Erreur : {e}")
