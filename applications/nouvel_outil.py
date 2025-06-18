@@ -69,6 +69,35 @@ def run():
             output = BytesIO()
             df_final.to_excel(output, index=False)
             output.seek(0)
+                        # === VÉRIFICATION VISUELLE DES CORRESPONDANCES ===
+            try:
+                def normalize(val):
+                    return str(val).strip().replace('\xa0', '').replace('\n', '').replace('\r', '').lower()
+
+                f1_series = df_f1["Document number"].dropna().map(normalize)
+                f2_series = df_f2["Package Number"].dropna().map(normalize)
+
+                f1_values = set(f1_series)
+                f2_values = set(f2_series)
+
+                only_in_f1 = sorted(f1_values - f2_values)
+                only_in_f2 = sorted(f2_values - f1_values)
+
+                if only_in_f1 or only_in_f2:
+                    st.markdown("### ⚠️ Résumé des écarts entre F1 et F2")
+                    st.markdown("---")
+
+                if only_in_f1:
+                    st.error(f"🚫 {len(only_in_f1)} document(s) trouvés dans F1 mais absents de F2 :")
+                    st.markdown("**Exemples :** " + ", ".join(only_in_f1[:10]) + ("..." if len(only_in_f1) > 10 else ""))
+
+                if only_in_f2:
+                    st.warning(f"⚠️ {len(only_in_f2)} package(s) trouvés dans F2 mais absents de F1 :")
+                    st.markdown("**Exemples :** " + ", ".join(only_in_f2[:10]) + ("..." if len(only_in_f2) > 10 else ""))
+
+            except Exception as e:
+                st.error(f"❌ Erreur lors de la vérification des correspondances F1/F2 : {e}")
+
             wb = load_workbook(output)
             ws = wb.active
 
@@ -125,33 +154,7 @@ def run():
             except Exception as e:
                 st.warning(f"⚠️ Erreur logo : {e}")
 
-            # === VÉRIFICATION VISUELLE DES CORRESPONDANCES ===
-           # === VÉRIFICATION VISUELLE DES CORRESPONDANCES ===
-try:
-    def normalize(val):
-        return str(val).strip().replace('\xa0', '').replace('\n', '').replace('\r', '').lower()
-
-    f1_series = df_f1["Document number"].dropna().map(normalize)
-    f2_series = df_f2["Package Number"].dropna().map(normalize)
-
-    f1_values = set(f1_series)
-    f2_values = set(f2_series)
-
-    only_in_f1 = sorted(f1_values - f2_values)
-    only_in_f2 = sorted(f2_values - f1_values)
-
-    if only_in_f1 or only_in_f2:
-        st.markdown("### ⚠️ Résumé des écarts entre F1 et F2")
-        st.markdown("---")
-
-    if only_in_f1:
-        st.error(f"🚫 {len(only_in_f1)} document(s) trouvés dans F1 mais absents de F2 :")
-        st.markdown("**Exemples :** " + ", ".join(only_in_f1[:10]) + ("..." if len(only_in_f1) > 10 else ""))
-
-    if only_in_f2:
-        st.warning(f"⚠️ {len(only_in_f2)} package(s) trouvés dans F2 mais absents de F1 :")
-        st.markdown("**Exemples :** " + ", ".join(only_in_f2[:10]) + ("..." if len(only_in_f2) > 10 else ""))
-
+           
 except Exception as e:
     st.error(f"❌ Erreur lors de la vérification des correspondances F1/F2 : {e}")
 
