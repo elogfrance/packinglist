@@ -3,8 +3,12 @@ try:
     def normalize(val):
         return str(val).strip().replace('\xa0', '').replace('\n', '').replace('\r', '').lower()
 
-    f1_series = df_f1["Document number"].dropna().map(normalize)
-    f2_series = df_f2["Package Number"].dropna().map(normalize)
+f1_series = df1["Package Number"].dropna().astype(str).map(normalize)
+f1_series = f1_series[f1_series != 'nan']
+f2_series = df2["Package Number"].dropna().astype(str).map(normalize)
+f2_series = f2_series[f2_series != 'nan']
+
+
 
     f1_values = set(f1_series)
     f2_values = set(f2_series)
