@@ -123,36 +123,25 @@ def run():
                 st.warning(f"⚠️ Erreur logo : {e}")
 
             # === VÉRIFICATION VISUELLE DES CORRESPONDANCES ===
+            # === INSERTION VÉRIFICATION DE CORRESPONDANCE ===
             try:
-                def normalize(val):
-                    return str(val).strip().replace('\xa0', '').replace('\n', '').replace('\r', '').lower()
+                f1_values = set(df_f1["Document number"].dropna().astype(str).str.strip())
+                f2_values = set(df_f2["Package Number"].dropna().astype(str).str.strip())
 
-                f1_series = df_f1["Document number"].dropna().map(normalize)
-                f2_series = df_f2["Package Number"].dropna().map(normalize)
+                only_in_f1 = f1_values - f2_values
+                only_in_f2 = f2_values - f1_values
 
-                f1_values = set(f1_series)
-                f2_values = set(f2_series)
+                if only_in_f1:
+                    st.warning("⚠️ Attention : les documents suivants sont dans F1 mais absents de F2 :")
+                    st.write(sorted(only_in_f1))
 
-                only_in_f1 = sorted(f1_values - f2_values)
-                only_in_f2 = sorted(f2_values - f1_values)
-
-                if only_in_f1 or only_in_f2:
-                    st.markdown("### ⚠️ Résumé des écarts entre F1 et F2")
-                    st.markdown("---")
-
-             
-                  if only_in_f1:
-    st.markdown("#### 🔴 Documents présents dans F1 mais absents de F2")
-    st.dataframe(pd.DataFrame(only_in_f1, columns=["Package F1 non trouvé dans F2"]))
-
-
- if only_in_f2:
-    st.markdown("#### 🟠 Packages présents dans F2 mais absents de F1")
-    st.dataframe(pd.DataFrame(only_in_f2, columns=["Package F2 non trouvé dans F1"]))
-
+                if only_in_f2:
+                    st.warning("⚠️ Attention : les packages suivants sont dans F2 mais absents de F1 :")
+                    st.write(sorted(only_in_f2))
 
             except Exception as e:
-                st.error(f"❌ Erreur lors de la vérification des correspondances F1/F2 : {e}")
+                st.error(f"Erreur lors de la vérification des correspondances F1/F2 : {e}")
+
 
             # Export final
             final_output = BytesIO()
