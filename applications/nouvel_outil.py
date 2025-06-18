@@ -143,7 +143,7 @@ def run():
              
                   if only_in_f1:
     st.markdown("#### 🔴 Documents présents dans F1 mais absents de F2")
-    st.dataframe(pd.DataFrame(only_in_f1, columns=["Document F1 non trouvé dans F2"]))
+    st.dataframe(pd.DataFrame(only_in_f1, columns=["Package F1 non trouvé dans F2"]))
 
 
  if only_in_f2:
