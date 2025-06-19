@@ -22,7 +22,7 @@ if "outil" not in st.session_state:
 # ------------------------------------------------
 if st.session_state.outil is None:
     st.image("logo_marketparts.png", width=600)
-    st.title("Bienvenue dans l’outil e-LOG")
+
     st.markdown("### Veuillez choisir un outil 👇")
     st.markdown("---")
 
