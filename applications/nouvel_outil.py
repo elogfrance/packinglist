@@ -16,16 +16,17 @@ def run():
 
     if f1 and f2:
         try:
+            # Chargement des fichiers en temporaires
             temp_f1 = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-            temp_f1.write(f1.read())
-            temp_f1.seek(0)
+            temp_f1.write(f1.read()); temp_f1.seek(0)
             temp_f2 = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-            temp_f2.write(f2.read())
-            temp_f2.seek(0)
+            temp_f2.write(f2.read()); temp_f2.seek(0)
 
+            # Lecture en DataFrame
             df_f1 = pd.read_excel(temp_f1.name)
             df_f2 = pd.read_excel(temp_f2.name)
 
+            # Nettoyage des noms de colonnes
             df_f2.columns = df_f2.columns.str.strip()
             palette_col = next((col for col in df_f2.columns if re.search(r"\bpal\b", col, re.IGNORECASE)), None)
             if not palette_col:
@@ -33,10 +34,18 @@ def run():
                 st.write("Colonnes disponibles :", df_f2.columns.tolist())
                 return
 
+            # === Conserver le format d'origine de la colonne palette (colonne E) ===
+            df_f2[palette_col] = df_f2[palette_col].astype(str).str.strip()
+            # Optionnel : uniformiser la longueur avec zfill
+            max_len = df_f2[palette_col].str.len().max()
+            df_f2[palette_col] = df_f2[palette_col].str.zfill(max_len)
+
+            # Préparation des colonnes de correspondance
             df_f1["N° COLIS"] = df_f1["Document number"].astype(str).str.strip()
             df_f2["Package Number"] = df_f2["Package Number"].astype(str).str.strip()
             colis_to_palette = dict(zip(df_f2["Package Number"], df_f2[palette_col]))
 
+            # Ordre final des colonnes
             final_order = [
                 ("Fournisseur", None),
                 ("N° PALETTE", None),
@@ -59,16 +68,19 @@ def run():
             for col_name, new_name in final_order:
                 df_final[new_name or col_name] = df_f1[col_name] if col_name in df_f1.columns else ""
 
+            # Mapping des palettes et remplissage des colonnes fixes
             df_final["N° PALETTE"] = df_final["N° COLIS"].map(colis_to_palette)
             df_final["Fournisseur"] = "MARKETPARTS"
             df_final["EAN"] = df_final["EAN"].astype(str).str.zfill(13)
 
+            # Export vers Excel
             output = BytesIO()
             df_final.to_excel(output, index=False)
             output.seek(0)
             wb = load_workbook(output)
             ws = wb.active
 
+            # Mise en page
             ws.insert_rows(1, amount=9)
             header_row_idx = 10
             headers = [str(cell.value).strip().lower() if cell.value else "" for cell in ws[header_row_idx]]
@@ -83,17 +95,20 @@ def run():
             unique_palettes = set(ws.cell(row=i, column=2).value for i in range(11, ws.max_row + 1) if ws.cell(row=i, column=2).value)
             ws["G7"] = len(unique_palettes)
 
+            # Nettoyage du fond
             white_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
             for row in ws.iter_rows():
                 for cell in row:
                     cell.fill = white_fill
 
+            # Style de l'en-tête
             for col in range(1, 16):
                 cell = ws.cell(row=10, column=col)
                 cell.fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
                 cell.font = Font(color="FFFFFF", bold=True)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
+            # Bordures et alignement
             border = Border(left=Side(style="thin"), right=Side(style="thin"),
                             top=Side(style="thin"), bottom=Side(style="thin"))
             for row in ws.iter_rows(min_row=10, max_row=ws.max_row, min_col=1, max_col=15):
@@ -101,6 +116,7 @@ def run():
                     cell.border = border
                     cell.alignment = Alignment(horizontal="center", vertical="center")
 
+            # Ajustement automatique des colonnes
             for col in ws.columns:
                 col_letter = col[0].column_letter
                 if col_letter > "O":
@@ -108,12 +124,14 @@ def run():
                 max_length = max((len(str(cell.value)) for cell in col if cell.value), default=0)
                 ws.column_dimensions[col_letter].width = max_length + 2
 
+            # Propriétés d'impression
             ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
             ws.page_setup.fitToWidth = 1
             ws.page_setup.fitToHeight = 0
             ws.print_title_rows = "10:10"
             ws.oddFooter.center.text = "Page &[Page] / &[Pages]"
 
+            # Logo
             try:
                 logo = OpenpyxlImage("logo_marketparts.png")
                 logo.width = int(logo.width * 0.36)
@@ -122,7 +140,7 @@ def run():
             except Exception as e:
                 st.warning(f"⚠️ Erreur logo : {e}")
 
-                        # === VÉRIFICATION VISUELLE DES CORRESPONDANCES ===
+            # Vérification visuelle des correspondances
             try:
                 def normalize(val):
                     return str(val).strip().replace('\xa0', '').replace('\n', '').replace('\r', '').lower()
@@ -170,12 +188,16 @@ def run():
             final_output.seek(0)
 
             st.success("✅ Fichier généré avec succès")
-            st.download_button("📥 Télécharger le fichier formaté",
-                               data=final_output,
-                               file_name="PackingList_Formatée.xlsx",
-                               df_final["N° PALETTE"] = df_final["N° PALETTE"].astype(str)
-
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            st.download_button(
+                "📥 Télécharger le fichier formaté",
+                data=final_output,
+                file_name="PackingList_Formatée.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
         except Exception as e:
             st.error(f"❌ Erreur : {e}")
+
+if __name__ == "__main__":
+    run()
+
