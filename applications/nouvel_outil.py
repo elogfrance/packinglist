@@ -173,6 +173,8 @@ def run():
             st.download_button("📥 Télécharger le fichier formaté",
                                data=final_output,
                                file_name="PackingList_Formatée.xlsx",
+                               df_final["N° PALETTE"] = df_final["N° PALETTE"].astype(str)
+
                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
         except Exception as e:
